@@ -6,20 +6,41 @@
 </head>
 <body>
 <link rel="stylesheet" href="estiloSing_in.css">
+
 <nav>
-    <a href="paginaPrincipal.html">Inicio</a>
+    <a href="../index.html">Inicio</a>
 </nav>
 
-<p> nombre de usuario</p>
-<input type="text" class="input" >
-<p> correo electronico  </p>
-<input type="email" class="input" >
-<p> contraseña </p>
-<input type="password" class="input" >
+<form class="form">
+    <p class="title">Register</p>
+    <p class="message">Registrate ahora y obtén acceso a nuestra app.</p>
+        <div class="flex">
+        <label>
+            <input required="" placeholder="" type="text" class="input">
+            <span>Firstname</span>
+        </label>
 
-<button>
-    Ingresar
-</button>
+        <label>
+            <input required="" placeholder="" type="text" class="input">
+            <span>Lastname</span>
+        </label>
+    </div>  
+            
+    <label>
+        <input required="" placeholder="" type="email" class="input">
+        <span>Email</span>
+    </label> 
+        
+    <label>
+        <input required="" placeholder="" type="password" class="input">
+        <span>Password</span>
+    </label>
+    <label>
+        <input required="" placeholder="" type="password" class="input">
+        <span>Confirm password</span>
+    </label>
+    <button class="submit">Submit</button>
+</form>
 
 </body>
 </html>
