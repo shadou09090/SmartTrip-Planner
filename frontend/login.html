@@ -9,25 +9,26 @@
 <link rel="stylesheet" href="estiloLogin.css">
 
 <nav>
-    <a href="paginaPrincipal.html">Inicio</a>
+    <a href="../index.html">Inicio</a>
 </nav>
 
-<p> nombre de usuario</p>
-<input type="text" class="input" >
-<p> correo electronico  </p>
-<input type="email" class="input" >
-<p> contraseña </p>
-<input type="password" class="input" >
-<p> confirmación contraseña </p>
-<input type="password" class="input" >
-<p> nombre </p>
-<input type="text" class="input" >
-<p> apellido </p>
-<input type="email" class="input">
-
-<button>
-    Ingresar
-</button>
+<form class="form">
+    <p class="title">Login</p>
+    <p class="message">Ingresa ahora y accede a tu cuenta.</p>
+        
+    <label>
+        <input required="" placeholder="" type="email" class="input">
+        <span>Email</span>
+    </label> 
+        
+    <label>
+        <input required="" placeholder="" type="password" class="input">
+        <span>Password</span>
+    </label>
+    
+    <button class="submit">Submit</button>
+    <p class="signin">¿No tienes cuenta? <a href="sing_in.html">Registrate</a></p>
+</form>
 
 </body>
 </html>
