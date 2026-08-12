@@ -1,5 +1,6 @@
 import React from 'react';
-import { MapPin, Calendar, Sparkles, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { MapPin, Calendar, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Button, FeatureCard } from '../components/ui';
 
 export default function Home({ onNavigate }) {
   return (
@@ -18,47 +19,41 @@ export default function Home({ onNavigate }) {
       </p>
 
       <div className="hero-buttons">
-        <button 
-          className="nav-btn nav-btn-primary" 
+        <Button 
+          variant="primary" 
           style={{ padding: '14px 28px', fontSize: '1rem' }}
           onClick={() => onNavigate('register')}
         >
           Empezar gratis
           <ArrowRight size={18} />
-        </button>
+        </Button>
 
-        <button 
-          className="btn-3d" 
+        <Button 
+          variant="3d" 
           onClick={() => onNavigate('login')}
         >
           Iniciar sesión
-        </button>
+        </Button>
       </div>
 
       <div className="features-grid">
-        <div className="feature-card">
-          <div className="feature-icon">
-            <MapPin size={24} />
-          </div>
-          <h3>Itinerarios Automáticos</h3>
-          <p>Crea rutas optimizadas según tus preferencias de viaje, presupuestos y tiempos disponibles.</p>
-        </div>
+        <FeatureCard
+          icon={MapPin}
+          title="Itinerarios Automáticos"
+          description="Crea rutas optimizadas según tus preferencias de viaje, presupuestos y tiempos disponibles."
+        />
 
-        <div className="feature-card">
-          <div className="feature-icon">
-            <Calendar size={24} />
-          </div>
-          <h3>Gestión de Calendario</h3>
-          <p>Organiza todas tus actividades, vuelos y hoteles en un solo lugar sincronizado en tiempo real.</p>
-        </div>
+        <FeatureCard
+          icon={Calendar}
+          title="Gestión de Calendario"
+          description="Organiza todas tus actividades, vuelos y hoteles en un solo lugar sincronizado en tiempo real."
+        />
 
-        <div className="feature-card">
-          <div className="feature-icon">
-            <ShieldCheck size={24} />
-          </div>
-          <h3>Acceso Seguro</h3>
-          <p>Tus datos e itinerarios siempre protegidos y disponibles desde cualquier dispositivo.</p>
-        </div>
+        <FeatureCard
+          icon={ShieldCheck}
+          title="Acceso Seguro"
+          description="Tus datos e itinerarios siempre protegidos y disponibles desde cualquier dispositivo."
+        />
       </div>
     </div>
   );

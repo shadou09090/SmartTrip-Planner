@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import Navbar from './components/Navbar';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import { Navbar, Footer } from './components/layout';
+import { Home, Login, Register } from './pages';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -25,9 +23,7 @@ export default function App() {
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {renderPage()}
       </main>
-      <footer className="footer">
-        © {new Date().getFullYear()} SmartTrip Planner. Todos los derechos reservados.
-      </footer>
+      <Footer />
     </>
   );
 }

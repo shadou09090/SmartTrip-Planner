@@ -1,5 +1,6 @@
 import React from 'react';
 import { Compass, LogIn, UserPlus, Home as HomeIcon } from 'lucide-react';
+import { Button } from '../ui';
 
 export default function Navbar({ currentPage, onNavigate }) {
   return (
@@ -13,30 +14,27 @@ export default function Navbar({ currentPage, onNavigate }) {
 
       <div className="nav-links">
         {currentPage !== 'home' && (
-          <button 
-            className="nav-btn nav-btn-secondary"
-            onClick={() => onNavigate('home')}
-          >
+          <Button variant="secondary" onClick={() => onNavigate('home')}>
             <HomeIcon size={18} />
             Inicio
-          </button>
+          </Button>
         )}
         
-        <button 
-          className={`nav-btn ${currentPage === 'login' ? 'nav-btn-primary' : 'nav-btn-secondary'}`}
+        <Button 
+          variant={currentPage === 'login' ? 'primary' : 'secondary'}
           onClick={() => onNavigate('login')}
         >
           <LogIn size={18} />
           Login
-        </button>
+        </Button>
 
-        <button 
-          className={`nav-btn ${currentPage === 'register' ? 'nav-btn-primary' : 'nav-btn-secondary'}`}
+        <Button 
+          variant={currentPage === 'register' ? 'primary' : 'secondary'}
           onClick={() => onNavigate('register')}
         >
           <UserPlus size={18} />
           Sign in
-        </button>
+        </Button>
       </div>
     </nav>
   );

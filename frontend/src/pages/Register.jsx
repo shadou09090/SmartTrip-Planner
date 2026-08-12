@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserPlus } from 'lucide-react';
+import { InputGroup, Button } from '../components/ui';
 
 export default function Register({ onNavigate }) {
   const [formData, setFormData] = useState({
@@ -46,74 +47,51 @@ export default function Register({ onNavigate }) {
         )}
 
         <div className="flex">
-          <label>
-            <input
-              required
-              type="text"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleChange}
-              className={`input ${formData.firstName ? 'input-has-value' : ''}`}
-            />
-            <span>Firstname</span>
-          </label>
-
-          <label>
-            <input
-              required
-              type="text"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleChange}
-              className={`input ${formData.lastName ? 'input-has-value' : ''}`}
-            />
-            <span>Lastname</span>
-          </label>
+          <InputGroup
+            label="Firstname"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+          />
+          <InputGroup
+            label="Lastname"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+          />
         </div>
 
-        <label>
-          <input
-            required
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            className={`input ${formData.email ? 'input-has-value' : ''}`}
-            autoComplete="email"
-          />
-          <span>Email</span>
-        </label>
+        <InputGroup
+          label="Email"
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          autoComplete="email"
+        />
 
-        <label>
-          <input
-            required
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            className={`input ${formData.password ? 'input-has-value' : ''}`}
-            autoComplete="new-password"
-          />
-          <span>Password</span>
-        </label>
+        <InputGroup
+          label="Password"
+          type="password"
+          name="password"
+          value={formData.password}
+          onChange={handleChange}
+          autoComplete="new-password"
+        />
 
-        <label>
-          <input
-            required
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            className={`input ${formData.confirmPassword ? 'input-has-value' : ''}`}
-            autoComplete="new-password"
-          />
-          <span>Confirm password</span>
-        </label>
+        <InputGroup
+          label="Confirm password"
+          type="password"
+          name="confirmPassword"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          autoComplete="new-password"
+        />
 
-        <button type="submit" className="submit" disabled={submitted}>
+        <Button type="submit" variant="submit" disabled={submitted}>
           <UserPlus size={18} />
           {submitted ? 'Registrando...' : 'Submit'}
-        </button>
+        </Button>
 
         <p className="signin">
           ¿Ya tienes una cuenta?{' '}

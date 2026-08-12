@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { LogIn, Mail, Lock } from 'lucide-react';
+import { LogIn } from 'lucide-react';
+import { InputGroup, Button } from '../components/ui';
 
 export default function Login({ onNavigate }) {
   const [formData, setFormData] = useState({
@@ -28,36 +29,28 @@ export default function Login({ onNavigate }) {
         <p className="title">Login</p>
         <p className="message">Ingresa ahora y accede a tu cuenta.</p>
 
-        <label>
-          <input
-            required
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            className={`input ${formData.email ? 'input-has-value' : ''}`}
-            autoComplete="email"
-          />
-          <span>Email</span>
-        </label>
+        <InputGroup
+          label="Email"
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          autoComplete="email"
+        />
 
-        <label>
-          <input
-            required
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            className={`input ${formData.password ? 'input-has-value' : ''}`}
-            autoComplete="current-password"
-          />
-          <span>Password</span>
-        </label>
+        <InputGroup
+          label="Password"
+          type="password"
+          name="password"
+          value={formData.password}
+          onChange={handleChange}
+          autoComplete="current-password"
+        />
 
-        <button type="submit" className="submit" disabled={submitted}>
+        <Button type="submit" variant="submit" disabled={submitted}>
           <LogIn size={18} />
           {submitted ? 'Ingresando...' : 'Submit'}
-        </button>
+        </Button>
 
         <p className="signin">
           ¿No tienes cuenta?{' '}

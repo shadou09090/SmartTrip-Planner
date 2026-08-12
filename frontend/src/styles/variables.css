@@ -1,0 +1,15 @@
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #eff6ff;
+    --text-dark: #0f172a;
+    --text-muted: #64748b;
+    --bg-light: #f8fafc;
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --border-color: rgba(203, 213, 225, 0.6);
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    --shadow-soft: 0 10px 30px -5px rgba(37, 99, 235, 0.08);
+    --shadow-card: 0 20px 40px -15px rgba(15, 23, 42, 0.1);
+}
