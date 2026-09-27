@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Navbar, Footer } from './components/layout';
 import { Home, Login, Register } from './pages';
+import GeneradorItinerario from './components/GeneradorItinerario';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -17,13 +18,14 @@ export default function App() {
     }
   };
 
-  return (
-    <>
-      <Navbar currentPage={currentPage} onNavigate={setCurrentPage} />
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {renderPage()}
-      </main>
-      <Footer />
-    </>
-  );
+    return (
+        <>
+            <Navbar currentPage={currentPage} onNavigate={setCurrentPage} />
+            <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <GeneradorItinerario />
+                {renderPage()}
+            </main>
+            <Footer />
+        </>
+    );
 }
