@@ -1,8 +1,8 @@
 import React from 'react';
-import { Compass, LogIn, UserPlus, Home as HomeIcon } from 'lucide-react';
+import { Compass, LogIn, LogOut, MapPin, UserPlus, Home as HomeIcon } from 'lucide-react';
 import { Button } from '../ui';
 
-export default function Navbar({ currentPage, onNavigate }) {
+export default function Navbar({ currentPage, isAuthenticated, onNavigate, onLogout }) {
   return (
     <nav className="navbar">
       <div className="nav-brand" onClick={() => onNavigate('home')}>
@@ -20,21 +20,39 @@ export default function Navbar({ currentPage, onNavigate }) {
           </Button>
         )}
         
-        <Button 
-          variant={currentPage === 'login' ? 'primary' : 'secondary'}
-          onClick={() => onNavigate('login')}
-        >
-          <LogIn size={18} />
-          Login
-        </Button>
+        {isAuthenticated ? (
+          <>
+            <Button
+              variant={currentPage === 'create-trip' ? 'primary' : 'secondary'}
+              onClick={() => onNavigate('create-trip')}
+            >
+              <MapPin size={18} />
+              Crear viaje
+            </Button>
+            <Button variant="secondary" onClick={onLogout}>
+              <LogOut size={18} />
+              Cerrar sesión
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              variant={currentPage === 'login' ? 'primary' : 'secondary'}
+              onClick={() => onNavigate('login')}
+            >
+              <LogIn size={18} />
+              Iniciar sesión
+            </Button>
 
-        <Button 
-          variant={currentPage === 'register' ? 'primary' : 'secondary'}
-          onClick={() => onNavigate('register')}
-        >
-          <UserPlus size={18} />
-          Sign in
-        </Button>
+            <Button
+              variant={currentPage === 'register' ? 'primary' : 'secondary'}
+              onClick={() => onNavigate('register')}
+            >
+              <UserPlus size={18} />
+              Registrarse
+            </Button>
+          </>
+        )}
       </div>
     </nav>
   );

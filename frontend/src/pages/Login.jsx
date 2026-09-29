@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { LogIn } from 'lucide-react';
 import { InputGroup, Button } from '../components/ui';
 
-export default function Login({ onNavigate }) {
+export default function Login({ onNavigate, onLogin }) {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -18,16 +18,16 @@ export default function Login({ onNavigate }) {
     e.preventDefault();
     setSubmitted(true);
     setTimeout(() => {
-      alert(`¡Bienvenido de nuevo! Email: ${formData.email}`);
       setSubmitted(false);
+      onLogin();
     }, 400);
   };
 
   return (
     <div className="form-container">
       <form className="form" onSubmit={handleSubmit}>
-        <p className="title">Login</p>
-        <p className="message">Ingresa ahora y accede a tu cuenta.</p>
+        <p className="title">Iniciar sesión</p>
+        <p className="message">Ingresa para comenzar a planificar tu viaje.</p>
 
         <InputGroup
           label="Email"
@@ -39,7 +39,7 @@ export default function Login({ onNavigate }) {
         />
 
         <InputGroup
-          label="Password"
+            label="Contraseña"
           type="password"
           name="password"
           value={formData.password}
@@ -49,7 +49,7 @@ export default function Login({ onNavigate }) {
 
         <Button type="submit" variant="submit" disabled={submitted}>
           <LogIn size={18} />
-          {submitted ? 'Ingresando...' : 'Submit'}
+          {submitted ? 'Ingresando...' : 'Ingresar'}
         </Button>
 
         <p className="signin">
