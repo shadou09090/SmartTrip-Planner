@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Navbar, Footer } from './components/layout';
 import { CreateTrip, Home, Login, Register } from './pages';
+import GeneradorItinerario from './components/GeneradorItinerario';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -50,6 +51,7 @@ export default function App() {
         onLogout={handleLogout}
       />
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <GeneradorItinerario />
         {renderPage()}
       </main>
       <Footer />
