@@ -1,8 +1,8 @@
 import React from 'react';
-import { Compass, LogIn, LogOut, MapPin, UserPlus, Home as HomeIcon } from 'lucide-react';
+import { Compass, LogIn, LogOut, Map, MapPin, UserPlus, Home as HomeIcon } from 'lucide-react';
 import { Button } from '../ui';
 
-export default function Navbar({ currentPage, isAuthenticated, onNavigate, onLogout }) {
+export default function Navbar({ currentPage, isAuthenticated, hasTrip, onNavigate, onLogout }) {
   return (
     <nav className="navbar">
       <div className="nav-brand" onClick={() => onNavigate('home')}>
@@ -29,6 +29,15 @@ export default function Navbar({ currentPage, isAuthenticated, onNavigate, onLog
               <MapPin size={18} />
               Crear viaje
             </Button>
+            {hasTrip && (
+              <Button
+                variant={currentPage === 'map' ? 'primary' : 'secondary'}
+                onClick={() => onNavigate('map')}
+              >
+                <Map size={18} />
+                Mapa
+              </Button>
+            )}
             <Button variant="secondary" onClick={onLogout}>
               <LogOut size={18} />
               Cerrar sesión

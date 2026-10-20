@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   CircleDollarSign,
   Heart,
+  Map,
   MapPin,
   Plane,
 } from 'lucide-react';
@@ -26,10 +27,15 @@ const initialForm = {
   interests: [],
 };
 
-export default function CreateTrip() {
+export default function CreateTrip({
+  initialTrip = null,
+  onTripCreated,
+  onResetTrip,
+  onViewMap,
+}) {
   const [formData, setFormData] = useState(initialForm);
   const [errors, setErrors] = useState({});
-  const [createdTrip, setCreatedTrip] = useState(null);
+  const [createdTrip, setCreatedTrip] = useState(initialTrip);
 
   const updateField = ({ target: { name, value } }) => {
     setFormData((current) => ({ ...current, [name]: value }));
@@ -72,17 +78,21 @@ export default function CreateTrip() {
     event.preventDefault();
     if (!validate()) return;
 
-    setCreatedTrip({
+    const trip = {
       ...formData,
       destination: formData.destination.trim(),
       budget: Number(formData.budget),
-    });
+    };
+
+    setCreatedTrip(trip);
+    onTripCreated?.(trip);
   };
 
   const startAnotherTrip = () => {
     setFormData(initialForm);
     setErrors({});
     setCreatedTrip(null);
+    onResetTrip?.();
   };
 
   if (createdTrip) {
@@ -113,9 +123,14 @@ export default function CreateTrip() {
             </div>
           </dl>
 
-          <Button variant="primary" onClick={startAnotherTrip}>
-            <Plane size={18} /> Crear otro viaje
-          </Button>
+          <div className="trip-result-actions">
+            <Button variant="primary" onClick={onViewMap}>
+              <Map size={18} /> Ver lugares en el mapa
+            </Button>
+            <Button variant="secondary" onClick={startAnotherTrip}>
+              <Plane size={18} /> Crear otro viaje
+            </Button>
+          </div>
         </div>
       </section>
     );

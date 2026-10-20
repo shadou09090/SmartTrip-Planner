@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Navbar, Footer } from './components/layout';
-import { CreateTrip, Home, Login, Register } from './pages';
+import { CreateTrip, Home, Login, MapPlaces, Register } from './pages';
 import GeneradorItinerario from './components/GeneradorItinerario';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeTrip, setActiveTrip] = useState(null);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
@@ -14,12 +15,18 @@ export default function App() {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    setActiveTrip(null);
     setCurrentPage('home');
   };
 
   const handleNavigate = (page) => {
-    if (page === 'create-trip' && !isAuthenticated) {
+    if ((page === 'create-trip' || page === 'map') && !isAuthenticated) {
       setCurrentPage('login');
+      return;
+    }
+
+    if (page === 'map' && !activeTrip) {
+      setCurrentPage('create-trip');
       return;
     }
 
@@ -34,8 +41,19 @@ export default function App() {
         return <Register onNavigate={handleNavigate} />;
       case 'create-trip':
         return isAuthenticated
-          ? <CreateTrip />
+          ? (
+            <CreateTrip
+              initialTrip={activeTrip}
+              onTripCreated={setActiveTrip}
+              onResetTrip={() => setActiveTrip(null)}
+              onViewMap={() => setCurrentPage('map')}
+            />
+          )
           : <Login onNavigate={handleNavigate} onLogin={handleLogin} />;
+      case 'map':
+        return isAuthenticated && activeTrip
+          ? <MapPlaces trip={activeTrip} onBack={() => setCurrentPage('create-trip')} />
+          : <CreateTrip />;
       case 'home':
       default:
         return <Home onNavigate={handleNavigate} isAuthenticated={isAuthenticated} />;
@@ -47,6 +65,7 @@ export default function App() {
       <Navbar
         currentPage={currentPage}
         isAuthenticated={isAuthenticated}
+        hasTrip={Boolean(activeTrip)}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
       />
