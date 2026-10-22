@@ -26,7 +26,7 @@ const initialForm = {
   interests: [],
 };
 
-export default function CreateTrip() {
+export default function CreateTrip({ onGoToItinerary }) {
   const [formData, setFormData] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [createdTrip, setCreatedTrip] = useState(null);
@@ -113,9 +113,16 @@ export default function CreateTrip() {
             </div>
           </dl>
 
-          <Button variant="primary" onClick={startAnotherTrip}>
-            <Plane size={18} /> Crear otro viaje
-          </Button>
+          <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '10px' }}>
+            {onGoToItinerary && (
+              <Button variant="primary" onClick={() => onGoToItinerary(createdTrip)}>
+                <CalendarDays size={18} /> Planificar Itinerario
+              </Button>
+            )}
+            <Button variant={onGoToItinerary ? 'secondary' : 'primary'} onClick={startAnotherTrip}>
+              <Plane size={18} /> Crear otro viaje
+            </Button>
+          </div>
         </div>
       </section>
     );

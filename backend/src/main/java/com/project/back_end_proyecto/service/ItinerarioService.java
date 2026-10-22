@@ -31,4 +31,16 @@ public class ItinerarioService {
         nuevoViaje.setDias(diasEstructurados);
         return viajeRepository.save(nuevoViaje);
     }
+
+    public DiaItinerario agregarActividadADia(Long viajeId, Long diaId, String actividad) {
+        Viaje viaje = viajeRepository.findById(viajeId).orElseThrow(() -> new RuntimeException("Viaje no encontrado"));
+        for (DiaItinerario dia : viaje.getDias()) {
+            if (dia.getId().equals(diaId)) {
+                dia.agregarActividad(actividad);
+                viajeRepository.save(viaje);
+                return dia;
+            }
+        }
+        throw new RuntimeException("Día no encontrado en el viaje");
+    }
 }

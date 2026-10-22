@@ -1,5 +1,6 @@
 package com.project.back_end_proyecto.controller;
 
+import com.project.back_end_proyecto.entity.DiaItinerario;
 import com.project.back_end_proyecto.entity.Viaje;
 import com.project.back_end_proyecto.service.ItinerarioService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,20 @@ public class ItinerarioController {
             Viaje viajeGuardado = itinerarioService.crearItinerarioVacio(inicio, fin);
 
             return ResponseEntity.ok(viajeGuardado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/{viajeId}/dia/{diaId}/actividad")
+    public ResponseEntity<DiaItinerario> agregarActividad(
+            @PathVariable Long viajeId,
+            @PathVariable Long diaId,
+            @RequestBody Map<String, String> body) {
+        try {
+            String actividad = body.get("actividad");
+            DiaItinerario diaActualizado = itinerarioService.agregarActividadADia(viajeId, diaId, actividad);
+            return ResponseEntity.ok(diaActualizado);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
