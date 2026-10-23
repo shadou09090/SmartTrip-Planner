@@ -2,7 +2,7 @@ import React from 'react';
 import { MapPin, Calendar, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button, FeatureCard } from '../components/ui';
 
-export default function Home({ onNavigate }) {
+export default function Home({ onNavigate, isAuthenticated }) {
   return (
     <div className="hero">
       <div className="badge">
@@ -22,9 +22,9 @@ export default function Home({ onNavigate }) {
         <Button 
           variant="primary" 
           style={{ padding: '14px 28px', fontSize: '1rem' }}
-          onClick={() => onNavigate('register')}
+          onClick={() => onNavigate(isAuthenticated ? 'create-trip' : 'register')}
         >
-          Empezar gratis
+          {isAuthenticated ? 'Planear mi viaje' : 'Empezar gratis'}
           <ArrowRight size={18} />
         </Button>
 
