@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, LogIn, LogOut, Map, MapPin, UserPlus, Home as HomeIcon } from 'lucide-react';
+import { Compass, LogIn, LogOut, Map, MapPin, UserPlus, Home as HomeIcon, CalendarDays } from 'lucide-react';
 import { Button } from '../ui';
 
 export default function Navbar({ currentPage, isAuthenticated, hasTrip, onNavigate, onLogout }) {
@@ -19,6 +19,14 @@ export default function Navbar({ currentPage, isAuthenticated, hasTrip, onNaviga
             Inicio
           </Button>
         )}
+
+        <Button
+          variant={currentPage === 'itinerary' ? 'primary' : 'secondary'}
+          onClick={() => onNavigate('itinerary')}
+        >
+          <CalendarDays size={18} />
+          Itinerario
+        </Button>
         
         {isAuthenticated ? (
           <>

@@ -32,6 +32,7 @@ export default function CreateTrip({
   onTripCreated,
   onResetTrip,
   onViewMap,
+  onViewItinerary,
 }) {
   const [formData, setFormData] = useState(initialForm);
   const [errors, setErrors] = useState({});
@@ -123,8 +124,13 @@ export default function CreateTrip({
             </div>
           </dl>
 
-          <div className="trip-result-actions">
-            <Button variant="primary" onClick={onViewMap}>
+          <div className="trip-result-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {onViewItinerary && (
+              <Button variant="primary" onClick={onViewItinerary}>
+                <CalendarDays size={18} /> Planificar Itinerario
+              </Button>
+            )}
+            <Button variant={onViewItinerary ? 'secondary' : 'primary'} onClick={onViewMap}>
               <Map size={18} /> Ver lugares en el mapa
             </Button>
             <Button variant="secondary" onClick={startAnotherTrip}>

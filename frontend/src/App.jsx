@@ -47,6 +47,7 @@ export default function App() {
               onTripCreated={setActiveTrip}
               onResetTrip={() => setActiveTrip(null)}
               onViewMap={() => setCurrentPage('map')}
+              onViewItinerary={() => setCurrentPage('itinerary')}
             />
           )
           : <Login onNavigate={handleNavigate} onLogin={handleLogin} />;
@@ -54,6 +55,13 @@ export default function App() {
         return isAuthenticated && activeTrip
           ? <MapPlaces trip={activeTrip} onBack={() => setCurrentPage('create-trip')} />
           : <CreateTrip />;
+      case 'itinerary':
+        return (
+          <GeneradorItinerario
+            tripData={activeTrip}
+            onNavigate={handleNavigate}
+          />
+        );
       case 'home':
       default:
         return <Home onNavigate={handleNavigate} isAuthenticated={isAuthenticated} />;
@@ -70,7 +78,6 @@ export default function App() {
         onLogout={handleLogout}
       />
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <GeneradorItinerario />
         {renderPage()}
       </main>
       <Footer />
