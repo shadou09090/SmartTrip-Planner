@@ -218,15 +218,29 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                 <CalendarDays size={26} />
               </div>
               <div>
-                <span className="eyebrow">Historia de Usuario #4</span>
+                <span className="eyebrow">Itinerario de Viaje</span>
                 <h1>
                   {destino
-                    ? `Itinerario para ${destino}`
+                    ? (tripData?.origin ? `Itinerario: ${tripData.origin} ➔ ${destino}` : `Itinerario para ${destino}`)
                     : 'Planificador de Itinerario'}
                 </h1>
                 <p>
                   Crea un espacio estructurado por días y agrega actividades manualmente a cada uno.
                 </p>
+                {tripData && (tripData.budgetLevel || (tripData.interests && tripData.interests.length > 0)) && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                    {tripData.budgetLevel && (
+                      <span style={{ fontSize: '0.78rem', background: '#e0e7ff', color: '#3730a3', padding: '3px 9px', borderRadius: '6px', fontWeight: 600 }}>
+                        Nivel: {tripData.budgetLevel}
+                      </span>
+                    )}
+                    {tripData.interests && tripData.interests.map((int) => (
+                      <span key={int} style={{ fontSize: '0.78rem', background: '#f1f5f9', color: '#475569', padding: '3px 9px', borderRadius: '6px', fontWeight: 600 }}>
+                        {int}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
