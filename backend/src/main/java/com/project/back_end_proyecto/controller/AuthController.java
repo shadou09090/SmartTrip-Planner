@@ -1,15 +1,22 @@
 package com.project.back_end_proyecto.controller;
 
 import com.project.back_end_proyecto.dto.LoginRequest;
+import com.project.back_end_proyecto.dto.LoginResponse;
 import com.project.back_end_proyecto.dto.SignupRequest;
+import com.project.back_end_proyecto.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
 public class AuthController {
+
+    private final AuthService authService;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest request) {
@@ -21,10 +28,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        System.out.println("=== LOGIN recibido ===");
-        System.out.println("Email: " + request.getEmail());
-        System.out.println("Password: " + request.getPassword());
-        return ResponseEntity.ok("Datos de login recibidos correctamente");
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
     }
 }
