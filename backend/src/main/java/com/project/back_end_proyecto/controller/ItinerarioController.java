@@ -1,5 +1,7 @@
 package com.project.back_end_proyecto.controller;
 
+import com.project.back_end_proyecto.dto.TrasladoRequest;
+import com.project.back_end_proyecto.dto.TrasladoResponse;
 import com.project.back_end_proyecto.entity.DiaItinerario;
 import com.project.back_end_proyecto.entity.Viaje;
 import com.project.back_end_proyecto.service.ItinerarioService;
@@ -43,6 +45,22 @@ public class ItinerarioController {
             return ResponseEntity.ok(diaActualizado);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * HU-010: Endpoint para calcular los tiempos estimados de traslado
+     * entre dos actividades consecutivas (a pie, transporte público y automóvil).
+     */
+    @PostMapping("/calcular-traslado")
+    public ResponseEntity<TrasladoResponse> calcularTraslado(@RequestBody TrasladoRequest request) {
+        try {
+            TrasladoResponse respuesta = itinerarioService.calcularTraslado(request);
+            return ResponseEntity.ok(respuesta);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 }

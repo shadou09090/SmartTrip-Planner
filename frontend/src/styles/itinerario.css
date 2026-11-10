@@ -622,3 +622,366 @@
         padding: 18px;
     }
 }
+
+/* ==========================================================================
+   HU-010: Tarjeta de Tiempo de Traslado entre Actividades Consecutivas
+   ========================================================================== */
+
+.travel-time-card {
+    position: relative;
+    margin: 8px 0;
+    padding: 0 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.travel-connector-line {
+    width: 2px;
+    height: 12px;
+    background: #cbd5e1;
+    border-radius: 1px;
+}
+
+.travel-card-inner {
+    width: 100%;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.05);
+    transition: all 0.2s ease;
+}
+
+.travel-time-card.has-warning .travel-card-inner {
+    border-color: #fcd34d;
+    box-shadow: 0 4px 14px -3px rgba(245, 158, 11, 0.15);
+}
+
+.travel-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.travel-route-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.travel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--primary);
+}
+
+.travel-endpoints {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.endpoint-origin,
+.endpoint-dest {
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.endpoint-arrow {
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.travel-meta-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.travel-distance-tag {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: #f1f5f9;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.travel-distance-tag strong {
+    color: var(--text-dark);
+}
+
+.travel-cache-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+    padding: 3px 8px;
+    border-radius: 999px;
+    animation: fadeIn 0.2s ease-in;
+}
+
+/* Grilla de los 3 modos de traslado */
+.travel-modes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.travel-mode-item {
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+}
+
+.travel-mode-item:hover {
+    border-color: #93c5fd;
+    background: #f8fafc;
+    transform: translateY(-1px);
+}
+
+.travel-mode-item.active {
+    border-color: var(--primary);
+    background: #eff6ff;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.travel-mode-item.mode-warning {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.travel-mode-item.mode-warning.active {
+    border-color: #d97706;
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
+}
+
+.mode-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mode-icon-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mode-icon {
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.travel-mode-item.mode-warning .mode-icon {
+    color: #d97706;
+}
+
+.mode-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+.mode-time-container {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+
+.mode-time {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+}
+
+.travel-mode-item.mode-warning .mode-time {
+    color: #9a3412;
+}
+
+/* Criterio 2: Advertencia visual junto al tiempo si supera los 120 minutos */
+.warning-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 999px;
+    white-space: nowrap;
+    animation: pulseWarning 2s infinite ease-in-out;
+}
+
+@keyframes pulseWarning {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.04);
+        box-shadow: 0 0 6px rgba(239, 68, 68, 0.35);
+    }
+}
+
+.mode-note {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    line-height: 1.25;
+}
+
+/* Banner de advertencia general de viabilidad */
+.travel-warning-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: #fff7ed;
+    border: 1.5px solid #fed7aa;
+    border-radius: var(--radius-sm);
+    color: #9a3412;
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.warning-banner-icon {
+    color: #ea580c;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.warning-banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.warning-banner-text strong {
+    color: #7c2d12;
+}
+
+/* Chips para lugares recomendados en el formulario */
+.place-chips-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.place-chips-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.place-chips-container {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.place-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.place-chip:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: #93c5fd;
+}
+
+.place-chip.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.actividad-ubicacion-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-left: 6px;
+}
+
+.btn-demo-itinerario {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    color: #475569;
+    border: 1.5px dashed #cbd5e1;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-demo-itinerario:hover {
+    background: #f0fdf4;
+    color: #166534;
+    border-color: #86efac;
+}
+
+@media (max-width: 640px) {
+    .travel-modes-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .travel-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
