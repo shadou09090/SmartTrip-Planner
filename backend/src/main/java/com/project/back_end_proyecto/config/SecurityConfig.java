@@ -47,7 +47,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // temporal: sin token todavia no hay forma de autenticar otras rutas
-                        .requestMatchers("/api/auth/**", "/api/itinerario/**", "/api/viajes/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/itinerario/**", "/api/viajes/**",
+                                "/api/vuelos/**").permitAll()
                         .anyRequest().authenticated()
                 );
         return http.build();
