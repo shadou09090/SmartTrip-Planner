@@ -1,11 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ArrowLeft, CalendarDays, Check, LocateFixed, MapPin, Navigation } from 'lucide-react';
+import { ArrowLeft, LocateFixed, MapPin, Navigation } from 'lucide-react';
 import { Button } from '../components/ui';
-import { DESTINATIONS, FALLBACK_DESTINATION, findDestination } from '../data/destinations';
+import { DESTINATIONS, findDestination } from '../data/destinations';
 
-export default function MapPlaces({ trip, onBack, onAddActivityToItinerary, onGoToItinerary }) {
+const FALLBACK_DESTINATION = {
+  name: 'Destino seleccionado',
+  center: [4.5709, -74.2973],
+  places: [],
+};
+
+export default function MapPlaces({ trip, onBack }) {
   const mapElementRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef(new Map());
@@ -184,16 +190,6 @@ export default function MapPlaces({ trip, onBack, onAddActivityToItinerary, onGo
                   <h2>{selectedPlace.name}</h2>
                   <p><Navigation size={16} /> {selectedPlace.location}</p>
                 </div>
-                {onAddActivityToItinerary && (
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <Button
-                      variant="primary"
-                      onClick={() => onAddActivityToItinerary(selectedPlace.name, selectedPlace.location)}
-                    >
-                      <CalendarDays size={16} /> Añadir a mi Itinerario
-                    </Button>
-                  </div>
-                )}
               </>
             ) : (
               <p><MapPin size={18} /> Selecciona un marcador para ver el nombre y la ubicación.</p>

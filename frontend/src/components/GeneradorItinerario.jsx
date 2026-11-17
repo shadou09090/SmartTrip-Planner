@@ -1,18 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar,
   CalendarDays,
   CheckCircle2,
   Clock,
-  Map,
   MapPin,
   Plus,
   Sparkles,
   Trash2,
   X,
-  AlertCircle
+  AlertCircle,
+  Navigation,
+  Compass
 } from 'lucide-react';
-import MapActivityPicker from './MapActivityPicker';
+import TravelTimeCard from './TravelTimeCard';
+import {
+  findDestination,
+  resolveCoordinates,
+  DESTINATIONS
+} from '../data/destinations';
 
 export default function GeneradorItinerario({ tripData = null, onNavigate = null }) {
   const [fechaInicio, setFechaInicio] = useState(tripData?.startDate || '');
@@ -24,13 +30,16 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
   const [error, setError] = useState('');
   const [conexionBackend, setConexionBackend] = useState(null); // true = backend, false = local
 
-  // Estados para selección desde el mapa
-  const [mostrarSelectorMapa, setMostrarSelectorMapa] = useState(false);
-  const [diaParaMapa, setDiaParaMapa] = useState(null);
-
   // Campos para la nueva actividad en el día seleccionado
   const [nuevaActividadTexto, setNuevaActividadTexto] = useState('');
   const [nuevaActividadHora, setNuevaActividadHora] = useState('');
+  const [nuevaActividadUbicacion, setNuevaActividadUbicacion] = useState('');
+
+  // Lugares recomendados para el destino actual
+  const lugaresRecomendados = useMemo(() => {
+    const dest = findDestination(destino);
+    return dest ? dest.places : [];
+  }, [destino]);
 
   // Si se reciben datos de un viaje creado previamente, auto-generar el espacio
   useEffect(() => {
@@ -40,32 +49,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
       if (tripData.destination) setDestino(tripData.destination);
       generarEspacioItinerario(tripData.startDate, tripData.endDate);
     }
-  }, [tripData?.startDate, tripData?.endDate, tripData?.destination]);
-
-  // Si llega una actividad seleccionada desde la página del mapa, agregarla al primer día disponible
-  useEffect(() => {
-    if (tripData?.pendingActivity && itinerario.length > 0) {
-      const act = tripData.pendingActivity;
-      setItinerario((prevDias) => {
-        const diaTarget = prevDias[0];
-        if (diaTarget.actividades.some((a) => a.texto === act.texto)) return prevDias;
-        return [
-          {
-            ...diaTarget,
-            actividades: [
-              ...diaTarget.actividades,
-              {
-                id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-                texto: act.texto,
-                hora: act.hora || '10:00 AM'
-              }
-            ]
-          },
-          ...prevDias.slice(1)
-        ];
-      });
-    }
-  }, [tripData?.pendingActivity, itinerario.length]);
+  }, [tripData]);
 
   // Función para calcular días en el cliente como fallback resiliente
   const generarDiasLocalmente = (inicioStr, finStr) => {
@@ -132,17 +116,27 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
           numero: idx + 1,
           fecha: dia.fecha,
           actividades: Array.isArray(dia.actividades)
-            ? dia.actividades.map((act, aIdx) =>
-                typeof act === 'string'
-                  ? { id: `act-${aIdx}`, texto: act, hora: '' }
-                  : act
-              )
+            ? dia.actividades.map((act, aIdx) => {
+                if (typeof act === 'string') {
+                  const coords = resolveCoordinates(act, destino);
+                  return {
+                    id: `act-${aIdx}`,
+                    texto: act,
+                    hora: '',
+                    ubicacion: act,
+                    coordenadas: coords
+                  };
+                }
+                return {
+                  ...act,
+                  coordenadas: act.coordenadas || resolveCoordinates(act.ubicacion || act.texto, destino)
+                };
+              })
             : []
         }));
 
         setItinerario(diasBackend);
         setConexionBackend(true);
-        // Seleccionar por defecto el día 1 para facilitar la interacción
         if (diasBackend.length > 0) {
           setDiaSeleccionado(diasBackend[0].id);
         }
@@ -150,7 +144,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
         throw new Error('Respuesta no satisfactoria del backend');
       }
     } catch (err) {
-      // Si el backend no está iniciado o falla, usar fallback local inteligente
+      // Fallback local resiliente
       console.warn('Backend no disponible, generando itinerario en modo local:', err);
       const diasCalculados = generarDiasLocalmente(inicio, fin);
       setItinerario(diasCalculados);
@@ -168,18 +162,28 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
     generarEspacioItinerario(fechaInicio, fechaFin);
   };
 
-  // Criterio 2: Seleccionar un día específico
+  // Seleccionar un día específico
   const handleSeleccionarDia = (diaId) => {
     setDiaSeleccionado((prev) => (prev === diaId ? null : diaId));
     setNuevaActividadTexto('');
     setNuevaActividadHora('');
+    setNuevaActividadUbicacion('');
   };
 
-  // Criterio 2: Agregar actividad de forma manual al día seleccionado
+  // Cargar actividad desde chip recomendado
+  const handleSelectChipLugar = (lugar) => {
+    setNuevaActividadTexto(lugar.name);
+    setNuevaActividadUbicacion(lugar.name);
+  };
+
+  // Agregar actividad al día seleccionado con soporte de ubicación y coordenadas
   const handleAgregarActividad = (diaId, e) => {
     e?.preventDefault();
 
     if (!nuevaActividadTexto.trim()) return;
+
+    const ubicacionFinal = (nuevaActividadUbicacion || nuevaActividadTexto).trim();
+    const coordenadasResueltas = resolveCoordinates(ubicacionFinal, destino);
 
     setItinerario((prevDias) =>
       prevDias.map((dia) => {
@@ -187,7 +191,9 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
           const nuevaAct = {
             id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             texto: nuevaActividadTexto.trim(),
-            hora: nuevaActividadHora.trim()
+            hora: nuevaActividadHora.trim(),
+            ubicacion: ubicacionFinal,
+            coordenadas: coordenadasResueltas
           };
           return {
             ...dia,
@@ -200,38 +206,76 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
 
     setNuevaActividadTexto('');
     setNuevaActividadHora('');
+    setNuevaActividadUbicacion('');
   };
 
-  // Abrir selector desde el mapa para un día específico
-  const abrirSelectorMapa = (diaId, diaNumero) => {
-    setDiaParaMapa({ id: diaId, numero: diaNumero });
-    setMostrarSelectorMapa(true);
-  };
+  // Cargar actividades de demostración con traslados para probar inmediatamente la HU-010
+  const handleCargarDemoActividades = (diaId) => {
+    const dest = findDestination(destino);
+    let actividadesDemo = [];
 
-  // Callback cuando se selecciona un lugar en el mapa
-  const handlePlaceSelectedFromMap = ({ texto, ubicacion, hora }) => {
-    if (!diaParaMapa) return;
-    const textoFinal = ubicacion ? `${texto} · ${ubicacion}` : texto;
+    if (dest && dest.keys.includes('cartagena')) {
+      actividadesDemo = [
+        {
+          id: `demo-${Date.now()}-1`,
+          texto: 'Recorrido histórico por la Ciudad Amurallada',
+          hora: '09:00 AM',
+          ubicacion: 'Ciudad Amurallada, Cartagena',
+          coordenadas: [10.4236, -75.5503]
+        },
+        {
+          id: `demo-${Date.now()}-2`,
+          texto: 'Almuerzo y artesanías en Getsemaní',
+          hora: '12:30 PM',
+          ubicacion: 'Barrio Getsemaní, Cartagena',
+          coordenadas: [10.4204, -75.5445]
+        },
+        {
+          id: `demo-${Date.now()}-3`,
+          texto: 'Excursión a las Islas del Rosario (Traslado prolongado)',
+          hora: '03:30 PM',
+          ubicacion: 'Islas del Rosario, Cartagena',
+          coordenadas: [10.1789, -75.7486]
+        }
+      ];
+    } else {
+      // Default demo en Bogotá con trayecto corto y trayecto largo (+120 min caminando para Criterio 2)
+      actividadesDemo = [
+        {
+          id: `demo-${Date.now()}-1`,
+          texto: 'Visita guiada al Museo del Oro',
+          hora: '09:00 AM',
+          ubicacion: 'Museo del Oro, Bogotá',
+          coordenadas: [4.6019, -74.0720]
+        },
+        {
+          id: `demo-${Date.now()}-2`,
+          texto: 'Paseo histórico por la Plaza de Bolívar',
+          hora: '11:00 AM',
+          ubicacion: 'Plaza de Bolívar, Bogotá',
+          coordenadas: [4.5981, -74.0758]
+        },
+        {
+          id: `demo-${Date.now()}-3`,
+          texto: 'Excursión a la Catedral de Sal de Zipaquirá',
+          hora: '02:30 PM',
+          ubicacion: 'Catedral de Sal de Zipaquirá',
+          coordenadas: [5.0192, -74.0044]
+        }
+      ];
+    }
 
     setItinerario((prevDias) =>
       prevDias.map((dia) => {
-        if (dia.id === diaParaMapa.id) {
-          const nuevaAct = {
-            id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-            texto: textoFinal,
-            hora: hora || ''
-          };
+        if (dia.id === diaId) {
           return {
             ...dia,
-            actividades: [...dia.actividades, nuevaAct]
+            actividades: [...dia.actividades, ...actividadesDemo]
           };
         }
         return dia;
       })
     );
-
-    setMostrarSelectorMapa(false);
-    setDiaParaMapa(null);
   };
 
   // Eliminar actividad
@@ -281,29 +325,15 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                 <CalendarDays size={26} />
               </div>
               <div>
-                <span className="eyebrow">Itinerario de Viaje</span>
+                <span className="eyebrow">Itinerario y Viabilidad del Viaje (HU-010)</span>
                 <h1>
                   {destino
-                    ? (tripData?.origin ? `Itinerario: ${tripData.origin} ➔ ${destino}` : `Itinerario para ${destino}`)
+                    ? `Itinerario para ${destino}`
                     : 'Planificador de Itinerario'}
                 </h1>
                 <p>
-                  Crea un espacio estructurado por días y agrega actividades manualmente a cada uno.
+                  Organiza tus actividades por día y visualiza los tiempos estimados de traslado entre ellas para evaluar la viabilidad de tu cronograma.
                 </p>
-                {tripData && (tripData.budgetLevel || (tripData.interests && tripData.interests.length > 0)) && (
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                    {tripData.budgetLevel && (
-                      <span style={{ fontSize: '0.78rem', background: '#e0e7ff', color: '#3730a3', padding: '3px 9px', borderRadius: '6px', fontWeight: 600 }}>
-                        Nivel: {tripData.budgetLevel}
-                      </span>
-                    )}
-                    {tripData.interests && tripData.interests.map((int) => (
-                      <span key={int} style={{ fontSize: '0.78rem', background: '#f1f5f9', color: '#475569', padding: '3px 9px', borderRadius: '6px', fontWeight: 600 }}>
-                        {int}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -381,11 +411,11 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                 <span>{totalActividades}</span> {totalActividades === 1 ? 'actividad' : 'actividades'} agregadas
               </div>
               <div className="itinerario-hint">
-                💡 Haz clic en cualquier día para seleccionarlo y habilitar la opción de agregar actividades.
+                💡 Haz clic en cualquier día para seleccionarlo, agregar actividades con ubicación y calcular tiempos de traslado automáticos.
               </div>
             </div>
 
-            {/* Lista dividida por cada uno de los días (Criterio 1) */}
+            {/* Lista dividida por cada uno de los días */}
             <div className="dias-lista">
               {itinerario.map((dia, index) => {
                 const esSeleccionado = diaSeleccionado === dia.id;
@@ -418,7 +448,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                         </div>
                       </div>
 
-                      <div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         {tieneActividades ? (
                           <span className="dia-tag-activo">
                             {dia.actividades.length}{' '}
@@ -432,59 +462,84 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                       </div>
                     </div>
 
-                    {/* Cuerpo: Actividades o aviso de vacío estructurado */}
+                    {/* Cuerpo: Actividades y tarjetas de traslado entre consecutivas */}
                     <div className="dia-cuerpo" onClick={(e) => e.stopPropagation()}>
                       {tieneActividades ? (
                         <div className="actividades-lista">
-                          {dia.actividades.map((act) => (
-                            <div key={act.id} className="actividad-item">
-                              <div className="actividad-left">
-                                {act.hora && (
-                                  <span className="actividad-hora">
-                                    <Clock size={13} /> {act.hora}
-                                  </span>
+                          {dia.actividades.map((act, actIdx) => {
+                            const nextAct = dia.actividades[actIdx + 1];
+                            const originCoords = act.coordenadas || resolveCoordinates(act.ubicacion || act.texto, destino);
+                            const destCoords = nextAct
+                              ? (nextAct.coordenadas || resolveCoordinates(nextAct.ubicacion || nextAct.texto, destino))
+                              : null;
+
+                            // Criterio 1: Dos actividades consecutivas para el mismo día con ubicación válida
+                            const puedeCalcularTraslado = Boolean(originCoords && destCoords);
+
+                            return (
+                              <React.Fragment key={act.id}>
+                                <div className="actividad-item">
+                                  <div className="actividad-left">
+                                    {act.hora && (
+                                      <span className="actividad-hora">
+                                        <Clock size={13} /> {act.hora}
+                                      </span>
+                                    )}
+                                    <span className="actividad-texto">{act.texto}</span>
+                                    {act.ubicacion && (
+                                      <span className="actividad-ubicacion-pill" title={`Ubicación: ${act.ubicacion}`}>
+                                        <MapPin size={12} /> {act.ubicacion}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="btn-eliminar-actividad"
+                                    title="Eliminar actividad"
+                                    onClick={() => handleEliminarActividad(dia.id, act.id)}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+
+                                {/* Criterio 1, 2 y 3: Tarjeta de traslado entre actividades consecutivas */}
+                                {puedeCalcularTraslado && (
+                                  <TravelTimeCard
+                                    originActivity={{ ...act, coordenadas: originCoords }}
+                                    destinationActivity={{ ...nextAct, coordenadas: destCoords }}
+                                  />
                                 )}
-                                <span className="actividad-texto">{act.texto}</span>
-                              </div>
-                              <button
-                                type="button"
-                                className="btn-eliminar-actividad"
-                                title="Eliminar actividad"
-                                onClick={() => handleEliminarActividad(dia.id, act.id)}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          ))}
+                              </React.Fragment>
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="dia-vacio-aviso">
                           <span>
                             Este día aún no tiene actividades programadas.
                           </span>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '4px' }}>
                             <button
                               type="button"
                               className="btn-seleccionar-dia"
                               onClick={() => handleSeleccionarDia(dia.id)}
                             >
-                              <Plus size={16} /> Escribir manual
+                              <Plus size={16} />
+                              {esSeleccionado ? 'Día seleccionado' : 'Seleccionar día'}
                             </button>
                             <button
                               type="button"
-                              className="btn-seleccionar-mapa-directo"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                abrirSelectorMapa(dia.id, index + 1);
-                              }}
+                              className="btn-demo-itinerario"
+                              onClick={() => handleCargarDemoActividades(dia.id)}
+                              title="Cargar actividades con traslados cercanos y prolongados para probar viabilidad"
                             >
-                              <Map size={16} /> 🗺️ Elegir del mapa
+                              <Compass size={15} /> Cargar ejemplo con traslados (HU-010)
                             </button>
                           </div>
                         </div>
                       )}
 
-                      {/* Criterio 2: Al seleccionar el día, se habilita la opción de agregar actividad manual o desde mapa */}
+                      {/* Formulario para agregar actividad */}
                       {esSeleccionado && (
                         <form
                           className="form-agregar-actividad"
@@ -504,21 +559,33 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                             </button>
                           </div>
 
-                          <div className="activity-options-bar">
-                            <button
-                              type="button"
-                              className="btn-choose-from-map"
-                              onClick={() => abrirSelectorMapa(dia.id, index + 1)}
-                            >
-                              <Map size={16} /> 🗺️ Seleccionar lugar desde el mapa
-                            </button>
-                            <span className="options-hint">o escribe una actividad personalizada:</span>
-                          </div>
+                          {/* Chips de sugerencias para lugares conocidos del destino */}
+                          {lugaresRecomendados.length > 0 && (
+                            <div className="place-chips-section">
+                              <span className="place-chips-label">
+                                Lugares recomendados en {destino || 'el destino'} (con ubicación válida):
+                              </span>
+                              <div className="place-chips-container">
+                                {lugaresRecomendados.map((lugar) => (
+                                  <button
+                                    key={lugar.id}
+                                    type="button"
+                                    className={`place-chip ${
+                                      nuevaActividadTexto === lugar.name ? 'active' : ''
+                                    }`}
+                                    onClick={() => handleSelectChipLugar(lugar)}
+                                  >
+                                    <MapPin size={12} /> {lugar.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
 
                           <div className="form-actividad-grid">
                             <input
                               type="text"
-                              placeholder="Ej. Desayuno típico en la plaza, Visita al museo..."
+                              placeholder="Ej. Visita al museo, Almuerzo típico, Recorrido histórico..."
                               value={nuevaActividadTexto}
                               onChange={(e) => setNuevaActividadTexto(e.target.value)}
                               autoFocus
@@ -526,13 +593,27 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                             />
                             <input
                               type="text"
-                              placeholder="Hora (ej. 09:00 AM o Tarde)"
+                              placeholder="Hora (ej. 09:00 AM o 14:30)"
                               value={nuevaActividadHora}
                               onChange={(e) => setNuevaActividadHora(e.target.value)}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Ubicación / Lugar o coordenadas (ej. Monserrate, Calle 10...)"
+                              value={nuevaActividadUbicacion}
+                              onChange={(e) => setNuevaActividadUbicacion(e.target.value)}
                             />
                           </div>
 
                           <div className="form-actividad-acciones">
+                            <button
+                              type="button"
+                              className="btn-demo-itinerario"
+                              onClick={() => handleCargarDemoActividades(dia.id)}
+                              style={{ marginRight: 'auto' }}
+                            >
+                              <Compass size={15} /> Cargar ejemplo con traslados
+                            </button>
                             <button
                               type="button"
                               className="btn-cancelar-actividad"
@@ -550,24 +631,16 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                         </form>
                       )}
 
-                      {/* Botones rápidos si no está abierto el formulario pero ya hay actividades */}
+                      {/* Botón rápido si no está abierto el formulario pero ya hay actividades */}
                       {!esSeleccionado && tieneActividades && (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
                           <button
                             type="button"
                             className="btn-abrir-actividad"
-                            style={{ marginTop: 0, flex: 1 }}
+                            style={{ flex: 1, marginTop: 0 }}
                             onClick={() => handleSeleccionarDia(dia.id)}
                           >
-                            <Plus size={16} /> + Escribir manual
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-seleccionar-mapa-directo"
-                            style={{ flex: 1, justifyContent: 'center' }}
-                            onClick={() => abrirSelectorMapa(dia.id, index + 1)}
-                          >
-                            <Map size={16} /> 🗺️ Elegir del mapa
+                            <Plus size={16} /> + Agregar otra actividad a este día
                           </button>
                         </div>
                       )}
@@ -590,19 +663,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
               los días vacíos de tu aventura.
             </p>
           </div>
-        )}
-
-        {/* Modal de selección interactiva desde el mapa */}
-        {mostrarSelectorMapa && diaParaMapa && (
-          <MapActivityPicker
-            destinationName={destino || tripData?.destination || ''}
-            dayNumber={diaParaMapa.numero}
-            onSelectPlace={handlePlaceSelectedFromMap}
-            onClose={() => {
-              setMostrarSelectorMapa(false);
-              setDiaParaMapa(null);
-            }}
-          />
         )}
       </div>
     </section>
