@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import React, { useState, useEffect, useMemo } from 'react';
+=======
+import React, { useState, useEffect } from 'react';
+import { costoEnCentavos, resumirPresupuesto, formatearCosto } from '../utils/presupuesto';
+>>>>>>> origin/hu-007-control-presupuesto
 import {
   Calendar,
   CalendarDays,
@@ -33,6 +38,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
   // Campos para la nueva actividad en el día seleccionado
   const [nuevaActividadTexto, setNuevaActividadTexto] = useState('');
   const [nuevaActividadHora, setNuevaActividadHora] = useState('');
+<<<<<<< HEAD
   const [nuevaActividadUbicacion, setNuevaActividadUbicacion] = useState('');
 
   // Lugares recomendados para el destino actual
@@ -40,6 +46,10 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
     const dest = findDestination(destino);
     return dest ? dest.places : [];
   }, [destino]);
+=======
+  const [nuevaActividadCosto, setNuevaActividadCosto] = useState('0');
+  const [errorCosto, setErrorCosto] = useState('');
+>>>>>>> origin/hu-007-control-presupuesto
 
   // Si se reciben datos de un viaje creado previamente, auto-generar el espacio
   useEffect(() => {
@@ -167,7 +177,12 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
     setDiaSeleccionado((prev) => (prev === diaId ? null : diaId));
     setNuevaActividadTexto('');
     setNuevaActividadHora('');
+<<<<<<< HEAD
     setNuevaActividadUbicacion('');
+=======
+    setNuevaActividadCosto('0');
+    setErrorCosto('');
+>>>>>>> origin/hu-007-control-presupuesto
   };
 
   // Cargar actividad desde chip recomendado
@@ -181,6 +196,11 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
     e?.preventDefault();
 
     if (!nuevaActividadTexto.trim()) return;
+    const centavos = costoEnCentavos(nuevaActividadCosto);
+    if (centavos === null) {
+      setErrorCosto('Ingresa un costo válido, mayor o igual a cero y con máximo dos decimales.');
+      return;
+    }
 
     const ubicacionFinal = (nuevaActividadUbicacion || nuevaActividadTexto).trim();
     const coordenadasResueltas = resolveCoordinates(ubicacionFinal, destino);
@@ -192,8 +212,12 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
             id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             texto: nuevaActividadTexto.trim(),
             hora: nuevaActividadHora.trim(),
+<<<<<<< HEAD
             ubicacion: ubicacionFinal,
             coordenadas: coordenadasResueltas
+=======
+            costo: centavos / 100
+>>>>>>> origin/hu-007-control-presupuesto
           };
           return {
             ...dia,
@@ -206,6 +230,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
 
     setNuevaActividadTexto('');
     setNuevaActividadHora('');
+<<<<<<< HEAD
     setNuevaActividadUbicacion('');
   };
 
@@ -276,6 +301,10 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
         return dia;
       })
     );
+=======
+    setNuevaActividadCosto('0');
+    setErrorCosto('');
+>>>>>>> origin/hu-007-control-presupuesto
   };
 
   // Eliminar actividad
@@ -309,6 +338,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
     }
   };
 
+  const presupuesto = resumirPresupuesto(itinerario, tripData?.budget);
   const totalActividades = itinerario.reduce(
     (acc, dia) => acc + (dia.actividades?.length || 0),
     0
@@ -403,6 +433,20 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
         </div>
 
         {/* Visualización del Itinerario Estructurado */}
+        <section className={`presupuesto-resumen ${presupuesto.excedido ? 'excedido' : ''}`} aria-label="Control de presupuesto">
+          <h2>Presupuesto de actividades</h2>
+          <dl aria-live="polite" aria-atomic="true">
+            <div><dt>Gasto acumulado</dt><dd>{formatearCosto(presupuesto.total)}</dd></div>
+            <div><dt>Presupuesto del viaje</dt><dd>{presupuesto.limite === null ? 'Sin definir' : formatearCosto(presupuesto.limite)}</dd></div>
+            {presupuesto.limite !== null && (
+              <div><dt>{presupuesto.excedido ? 'Exceso' : 'Disponible'}</dt><dd>{formatearCosto(Math.abs(presupuesto.diferencia))}</dd></div>
+            )}
+          </dl>
+          {presupuesto.excedido && (
+            <p className="itinerario-alerta" role="alert"><AlertCircle size={18} /> Presupuesto excedido. Tus actividades superan el límite por {formatearCosto(-presupuesto.diferencia)}.</p>
+          )}
+          {presupuesto.limite === null && <p>Define el presupuesto al crear tu viaje para recibir alertas de gastos.</p>}
+        </section>
         {itinerario.length > 0 ? (
           <div className="itinerario-content">
             <div className="itinerario-meta-bar">
@@ -430,6 +474,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                     role="button"
                     aria-pressed={esSeleccionado}
                     onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return;
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         handleSeleccionarDia(dia.id);
@@ -509,9 +554,25 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                                     destinationActivity={{ ...nextAct, coordenadas: destCoords }}
                                   />
                                 )}
+<<<<<<< HEAD
                               </React.Fragment>
                             );
                           })}
+=======
+                                <span className="actividad-texto">{act.texto}</span>
+                                <span className="actividad-costo">{formatearCosto((costoEnCentavos(act.costo) ?? 0) / 100)}</span>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn-eliminar-actividad"
+                                title="Eliminar actividad"
+                                onClick={() => handleEliminarActividad(dia.id, act.id)}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          ))}
+>>>>>>> origin/hu-007-control-presupuesto
                         </div>
                       ) : (
                         <div className="dia-vacio-aviso">
@@ -603,6 +664,24 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                               value={nuevaActividadUbicacion}
                               onChange={(e) => setNuevaActividadUbicacion(e.target.value)}
                             />
+                          </div>
+
+                          <div className="actividad-costo-field">
+                            <label htmlFor={`costo-${dia.id}`}>Costo de la actividad (COP)</label>
+                            <input
+                              id={`costo-${dia.id}`}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              required
+                              value={nuevaActividadCosto}
+                              onChange={(e) => { setNuevaActividadCosto(e.target.value); setErrorCosto(''); }}
+                              aria-invalid={Boolean(errorCosto)}
+                              aria-describedby={`costo-ayuda-${dia.id}`}
+                            />
+                            <p id={`costo-ayuda-${dia.id}`} className={errorCosto ? 'field-error' : ''}>
+                              {errorCosto || 'Usa 0 para actividades gratuitas.'}
+                            </p>
                           </div>
 
                           <div className="form-actividad-acciones">

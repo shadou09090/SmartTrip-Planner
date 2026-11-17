@@ -605,6 +605,25 @@
 }
 
 /* Responsividad */
+.presupuesto-resumen {
+    padding: 24px;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-lg);
+}
+
+.presupuesto-resumen h2 { margin: 0 0 16px; font-size: 1.15rem; }
+.presupuesto-resumen dl { display: flex; flex-wrap: wrap; gap: 20px 40px; margin: 0; }
+.presupuesto-resumen dt { color: var(--text-muted); font-size: 0.9rem; }
+.presupuesto-resumen dd { margin: 6px 0 0; font-size: 1.2rem; font-weight: 700; overflow-wrap: anywhere; }
+.presupuesto-resumen.excedido { border: 2px solid #b91c1c; }
+.actividad-left { flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; }
+.actividad-costo { color: #475569; font-weight: 600; }
+.actividad-costo-field { display: grid; gap: 6px; margin-bottom: 16px; }
+.actividad-costo-field label { font-size: 0.9rem; font-weight: 600; }
+.actividad-costo-field input { width: 100%; min-height: 44px; padding: 8px 14px; border: 1.5px solid #cbd5e1; border-radius: var(--radius-sm); font: inherit; }
+.actividad-costo-field p { margin: 0; font-size: 0.85rem; }
+
 @media (max-width: 768px) {
     .itinerario-form {
         grid-template-columns: 1fr;
