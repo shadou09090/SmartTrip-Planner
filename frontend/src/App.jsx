@@ -33,6 +33,19 @@ export default function App() {
     setCurrentPage(page);
   };
 
+  const handleAddActivityFromMap = (placeName, placeLocation) => {
+    const formatted = placeLocation ? `${placeName} · ${placeLocation}` : placeName;
+    setActiveTrip((prev) => ({
+      ...prev,
+      pendingActivity: {
+        id: `map-${Date.now()}`,
+        texto: formatted,
+        hora: 'Tarde',
+      },
+    }));
+    setCurrentPage('itinerary');
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case 'login':
@@ -53,7 +66,14 @@ export default function App() {
           : <Login onNavigate={handleNavigate} onLogin={handleLogin} />;
       case 'map':
         return isAuthenticated && activeTrip
-          ? <MapPlaces trip={activeTrip} onBack={() => setCurrentPage('create-trip')} />
+          ? (
+            <MapPlaces
+              trip={activeTrip}
+              onBack={() => setCurrentPage('create-trip')}
+              onAddActivityToItinerary={handleAddActivityFromMap}
+              onGoToItinerary={() => setCurrentPage('itinerary')}
+            />
+          )
           : <CreateTrip />;
       case 'itinerary':
         return (

@@ -4,6 +4,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  Map,
   MapPin,
   Plus,
   Sparkles,
@@ -11,6 +12,7 @@ import {
   X,
   AlertCircle
 } from 'lucide-react';
+import MapActivityPicker from './MapActivityPicker';
 
 export default function GeneradorItinerario({ tripData = null, onNavigate = null }) {
   const [fechaInicio, setFechaInicio] = useState(tripData?.startDate || '');
@@ -21,6 +23,10 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [conexionBackend, setConexionBackend] = useState(null); // true = backend, false = local
+
+  // Estados para selección desde el mapa
+  const [mostrarSelectorMapa, setMostrarSelectorMapa] = useState(false);
+  const [diaParaMapa, setDiaParaMapa] = useState(null);
 
   // Campos para la nueva actividad en el día seleccionado
   const [nuevaActividadTexto, setNuevaActividadTexto] = useState('');
@@ -34,7 +40,32 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
       if (tripData.destination) setDestino(tripData.destination);
       generarEspacioItinerario(tripData.startDate, tripData.endDate);
     }
-  }, [tripData]);
+  }, [tripData?.startDate, tripData?.endDate, tripData?.destination]);
+
+  // Si llega una actividad seleccionada desde la página del mapa, agregarla al primer día disponible
+  useEffect(() => {
+    if (tripData?.pendingActivity && itinerario.length > 0) {
+      const act = tripData.pendingActivity;
+      setItinerario((prevDias) => {
+        const diaTarget = prevDias[0];
+        if (diaTarget.actividades.some((a) => a.texto === act.texto)) return prevDias;
+        return [
+          {
+            ...diaTarget,
+            actividades: [
+              ...diaTarget.actividades,
+              {
+                id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                texto: act.texto,
+                hora: act.hora || '10:00 AM'
+              }
+            ]
+          },
+          ...prevDias.slice(1)
+        ];
+      });
+    }
+  }, [tripData?.pendingActivity, itinerario.length]);
 
   // Función para calcular días en el cliente como fallback resiliente
   const generarDiasLocalmente = (inicioStr, finStr) => {
@@ -171,6 +202,38 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
     setNuevaActividadHora('');
   };
 
+  // Abrir selector desde el mapa para un día específico
+  const abrirSelectorMapa = (diaId, diaNumero) => {
+    setDiaParaMapa({ id: diaId, numero: diaNumero });
+    setMostrarSelectorMapa(true);
+  };
+
+  // Callback cuando se selecciona un lugar en el mapa
+  const handlePlaceSelectedFromMap = ({ texto, ubicacion, hora }) => {
+    if (!diaParaMapa) return;
+    const textoFinal = ubicacion ? `${texto} · ${ubicacion}` : texto;
+
+    setItinerario((prevDias) =>
+      prevDias.map((dia) => {
+        if (dia.id === diaParaMapa.id) {
+          const nuevaAct = {
+            id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            texto: textoFinal,
+            hora: hora || ''
+          };
+          return {
+            ...dia,
+            actividades: [...dia.actividades, nuevaAct]
+          };
+        }
+        return dia;
+      })
+    );
+
+    setMostrarSelectorMapa(false);
+    setDiaParaMapa(null);
+  };
+
   // Eliminar actividad
   const handleEliminarActividad = (diaId, actividadId) => {
     setItinerario((prevDias) =>
@@ -218,15 +281,29 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                 <CalendarDays size={26} />
               </div>
               <div>
-                <span className="eyebrow">Historia de Usuario #4</span>
+                <span className="eyebrow">Itinerario de Viaje</span>
                 <h1>
                   {destino
-                    ? `Itinerario para ${destino}`
+                    ? (tripData?.origin ? `Itinerario: ${tripData.origin} ➔ ${destino}` : `Itinerario para ${destino}`)
                     : 'Planificador de Itinerario'}
                 </h1>
                 <p>
                   Crea un espacio estructurado por días y agrega actividades manualmente a cada uno.
                 </p>
+                {tripData && (tripData.budgetLevel || (tripData.interests && tripData.interests.length > 0)) && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                    {tripData.budgetLevel && (
+                      <span style={{ fontSize: '0.78rem', background: '#e0e7ff', color: '#3730a3', padding: '3px 9px', borderRadius: '6px', fontWeight: 600 }}>
+                        Nivel: {tripData.budgetLevel}
+                      </span>
+                    )}
+                    {tripData.interests && tripData.interests.map((int) => (
+                      <span key={int} style={{ fontSize: '0.78rem', background: '#f1f5f9', color: '#475569', padding: '3px 9px', borderRadius: '6px', fontWeight: 600 }}>
+                        {int}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -385,18 +462,29 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                           <span>
                             Este día aún no tiene actividades programadas.
                           </span>
-                          <button
-                            type="button"
-                            className="btn-seleccionar-dia"
-                            onClick={() => handleSeleccionarDia(dia.id)}
-                          >
-                            <Plus size={16} />
-                            {esSeleccionado ? 'Día seleccionado' : 'Seleccionar día'}
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '8px' }}>
+                            <button
+                              type="button"
+                              className="btn-seleccionar-dia"
+                              onClick={() => handleSeleccionarDia(dia.id)}
+                            >
+                              <Plus size={16} /> Escribir manual
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-seleccionar-mapa-directo"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                abrirSelectorMapa(dia.id, index + 1);
+                              }}
+                            >
+                              <Map size={16} /> 🗺️ Elegir del mapa
+                            </button>
+                          </div>
                         </div>
                       )}
 
-                      {/* Criterio 2: Al seleccionar el día, se habilita la opción de agregar actividad manual */}
+                      {/* Criterio 2: Al seleccionar el día, se habilita la opción de agregar actividad manual o desde mapa */}
                       {esSeleccionado && (
                         <form
                           className="form-agregar-actividad"
@@ -404,7 +492,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                         >
                           <div className="form-agregar-actividad-header">
                             <h4>
-                              <Plus size={16} /> Agregar actividad manual al Día {index + 1}
+                              <Plus size={16} /> Agregar actividad al Día {index + 1}
                             </h4>
                             <button
                               type="button"
@@ -414,6 +502,17 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                             >
                               <X size={16} />
                             </button>
+                          </div>
+
+                          <div className="activity-options-bar">
+                            <button
+                              type="button"
+                              className="btn-choose-from-map"
+                              onClick={() => abrirSelectorMapa(dia.id, index + 1)}
+                            >
+                              <Map size={16} /> 🗺️ Seleccionar lugar desde el mapa
+                            </button>
+                            <span className="options-hint">o escribe una actividad personalizada:</span>
                           </div>
 
                           <div className="form-actividad-grid">
@@ -451,15 +550,26 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                         </form>
                       )}
 
-                      {/* Botón rápido si no está abierto el formulario pero ya hay actividades */}
+                      {/* Botones rápidos si no está abierto el formulario pero ya hay actividades */}
                       {!esSeleccionado && tieneActividades && (
-                        <button
-                          type="button"
-                          className="btn-abrir-actividad"
-                          onClick={() => handleSeleccionarDia(dia.id)}
-                        >
-                          <Plus size={16} /> + Agregar otra actividad a este día
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="btn-abrir-actividad"
+                            style={{ marginTop: 0, flex: 1 }}
+                            onClick={() => handleSeleccionarDia(dia.id)}
+                          >
+                            <Plus size={16} /> + Escribir manual
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-seleccionar-mapa-directo"
+                            style={{ flex: 1, justifyContent: 'center' }}
+                            onClick={() => abrirSelectorMapa(dia.id, index + 1)}
+                          >
+                            <Map size={16} /> 🗺️ Elegir del mapa
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -480,6 +590,19 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
               los días vacíos de tu aventura.
             </p>
           </div>
+        )}
+
+        {/* Modal de selección interactiva desde el mapa */}
+        {mostrarSelectorMapa && diaParaMapa && (
+          <MapActivityPicker
+            destinationName={destino || tripData?.destination || ''}
+            dayNumber={diaParaMapa.numero}
+            onSelectPlace={handlePlaceSelectedFromMap}
+            onClose={() => {
+              setMostrarSelectorMapa(false);
+              setDiaParaMapa(null);
+            }}
+          />
         )}
       </div>
     </section>
