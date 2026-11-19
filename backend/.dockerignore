@@ -1,0 +1,16 @@
+target/
+.env
+.env.*
+**/.env
+**/.env.*
+**/WALLET_BD/
+**/Wallet/
+**/wallet/
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.wallet.zip
+*.wallet.zip.b64
+oracle-wallet*.zip*
+*wallet*.zip*

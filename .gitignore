@@ -37,3 +37,23 @@ build/
 
 backend/data/
 *.mv.db
+
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+**/WALLET_BD/
+**/Wallet/
+**/wallet/
+**/Wallet_*.zip
+**/wallet_*.zip
+**/cwallet.sso
+**/ewallet.p12
+**/*.jks
+**/*.keystore
+**/*.p12
+**/*.pfx
+**/oracle-wallet*.zip
+**/oracle-wallet*.zip.b64

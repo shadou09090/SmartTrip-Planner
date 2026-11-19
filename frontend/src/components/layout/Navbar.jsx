@@ -2,15 +2,20 @@ import React from 'react';
 import { Compass, LogIn, LogOut, Map, MapPin, UserPlus, Home as HomeIcon, CalendarDays } from 'lucide-react';
 import { Button } from '../ui';
 
-export default function Navbar({ currentPage, isAuthenticated, hasTrip, onNavigate, onLogout }) {
+export default function Navbar({ currentPage, isAuthenticated, hasTrip, onNavigate, onLogout, isLocalDevSession = false }) {
   return (
     <nav className="navbar">
-      <div className="nav-brand" onClick={() => onNavigate('home')}>
-        <div className="brand-icon">
+      <button
+        type="button"
+        className="nav-brand"
+        onClick={() => onNavigate('home')}
+        aria-label="SmartTrip Planner, ir al inicio"
+      >
+        <span className="brand-icon">
           <Compass size={24} />
-        </div>
+        </span>
         <span>SmartTrip Planner</span>
-      </div>
+      </button>
 
       <div className="nav-links">
         {currentPage !== 'home' && (
@@ -28,7 +33,17 @@ export default function Navbar({ currentPage, isAuthenticated, hasTrip, onNaviga
           Itinerario
         </Button>
         
-        {isAuthenticated ? (
+        {isAuthenticated && isLocalDevSession ? (
+          <>
+            <Button variant="primary" onClick={() => onNavigate('local-duffel')}>
+              Búsqueda Duffel local
+            </Button>
+            <Button variant="secondary" onClick={onLogout}>
+              <LogOut size={18} />
+              Cerrar sesión
+            </Button>
+          </>
+        ) : isAuthenticated ? (
           <>
             <Button
               variant={currentPage === 'create-trip' ? 'primary' : 'secondary'}
@@ -36,6 +51,12 @@ export default function Navbar({ currentPage, isAuthenticated, hasTrip, onNaviga
             >
               <MapPin size={18} />
               Crear viaje
+            </Button>
+            <Button
+              variant={currentPage === 'trips' ? 'primary' : 'secondary'}
+              onClick={() => onNavigate('trips')}
+            >
+              Mis viajes
             </Button>
             {hasTrip && (
               <Button

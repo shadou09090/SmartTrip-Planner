@@ -1,0 +1,39 @@
+.flight-search-panel { margin: 1rem 0 1.5rem; padding: 1.25rem; border: 1px solid #dbe4f0; border-radius: 1rem; background: linear-gradient(135deg, #f8fbff, #fff); }
+.flight-search-heading, .flight-results-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.flight-search-heading h4, .flight-results-toolbar h5 { margin: .15rem 0 .75rem; }
+.flight-provider-badge { padding: .35rem .7rem; border-radius: 999px; color: #174ea6; background: #eaf2ff; font-weight: 700; font-size: .8rem; }
+.flight-search-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; align-items: end; }
+.flight-search-form label { position: relative; display: flex; flex-direction: column; gap: .35rem; font-size: .85rem; font-weight: 600; color: #334155; }
+.flight-search-form input, .flight-search-form select, .flight-results-toolbar select { min-height: 42px; padding: .55rem .65rem; border: 1px solid #cbd5e1; border-radius: .55rem; background: white; color: #0f172a; }
+.flight-search-button { min-height: 44px; border: 0; border-radius: .6rem; background: #1769aa; color: white; font-weight: 700; cursor: pointer; }
+.flight-search-button:disabled { opacity: .65; cursor: wait; }
+.flight-place-suggestions { position: absolute; z-index: 1000; top: 100%; left: 0; right: 0; max-height: 220px; overflow: auto; border: 1px solid #cbd5e1; border-radius: .5rem; background: white; box-shadow: 0 12px 24px #0f172a20; }
+.flight-place-suggestions button { display: flex; width: 100%; flex-direction: column; gap: .15rem; padding: .6rem .7rem; border: 0; border-bottom: 1px solid #eef2f7; background: white; text-align: left; cursor: pointer; }
+.flight-place-suggestions button:hover { background: #eff6ff; }
+.flight-place-suggestions small, .flight-iata-selected { color: #64748b; font-size: .75rem; }
+.flight-provider-notice { margin: 1rem 0; padding: .7rem .85rem; border-left: 4px solid #2876bd; border-radius: .4rem; background: #eff6ff; color: #1e3a5f; }
+.flight-provider-notice.sandbox { border-color: #d97706; background: #fff7ed; color: #7c2d12; }
+.flight-results-toolbar { margin-top: 1rem; }
+.flight-results-toolbar label { display: flex; align-items: center; gap: .5rem; font-size: .85rem; }
+.flight-offer-card { display: grid; grid-template-columns: minmax(160px, .7fr) 2fr; gap: 1rem; margin: .75rem 0; padding: 1rem; border: 1px solid #dbe4f0; border-radius: .8rem; background: white; }
+.flight-offer-card--selected { border-color: #1769aa; box-shadow: 0 0 0 2px #1769aa20; }
+.flight-select-button { grid-column: 1 / -1; justify-self: start; }
+.flight-search-panel .flight-search-button { width: 100%; }
+.flight-offer-price { display: flex; flex-direction: column; gap: .25rem; justify-content: center; }
+.flight-offer-price strong { color: #0f5132; font-size: 1.3rem; }
+.flight-offer-price small { color: #64748b; }
+.flight-slices { display: flex; flex-direction: column; }
+.flight-slice { display: grid; grid-template-columns: 1fr 1.2fr; gap: .8rem; padding: .5rem 0; }
+.flight-slice + .flight-slice { border-top: 1px dashed #cbd5e1; }
+.flight-slice div { display: flex; flex-direction: column; gap: .2rem; }
+.flight-slice small { color: #64748b; font-size: .75rem; }
+.flight-slice span { color: #475569; font-size: .84rem; }
+.flight-search-disclaimer { margin: .8rem 0 0; color: #64748b; font-size: .78rem; }
+.flight-error { margin-top: .8rem; }
+.selected-flight-review { display: grid; gap: .65rem; margin: 1rem 0; padding: 1rem; border: 1px solid #b8d4f2; border-radius: .8rem; background: #f2f7fd; color: #18334f; }
+.selected-flight-review__heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; }
+.selected-flight-review article { display: grid; gap: .25rem; padding-top: .5rem; border-top: 1px solid #dbe4f0; }
+.selected-flight-review p { margin: .25rem 0; font-size: .85rem; }
+.trip-edit-form .nav-btn { justify-self: start; }
+@media (max-width: 760px) { .flight-search-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .flight-offer-card { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .flight-search-form { grid-template-columns: 1fr; } .flight-slice { grid-template-columns: 1fr; } .flight-results-toolbar { align-items: flex-start; flex-direction: column; } }

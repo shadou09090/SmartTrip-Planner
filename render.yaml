@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: smarttrip-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    branch: deploy/smartrip-oracle-vercel
+    plan: starter
+    autoDeployTrigger: 'off'
+    healthCheckPath: /healthz
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: oracle
+      - key: ORACLE_TNS_ALIAS
+        value: smarttripdb_high
+      - key: ORACLE_DB_USERNAME
+        value: ADMIN
+      - key: ORACLE_DB_PASSWORD
+        sync: false
+      - key: ORACLE_WALLET_PATH
+        value: /tmp/oracle-wallet
+      - key: ORACLE_WALLET_ARCHIVE_B64_FILE
+        value: /etc/secrets/oracle-wallet.zip.b64
+      - key: SMARTTRIP_JWT_SECRET
+        sync: false
+      # Enable only after the package tables are verified in this database.
+      - key: SMARTTRIP_PACKAGE_PERSISTENCE_ENABLED
+        sync: false
+      - key: SMARTTRIP_CORS_ALLOWED_ORIGINS
+        sync: false
