@@ -6,7 +6,6 @@ import {
   Clock,
   Compass,
   MapPin,
-  Navigation,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -29,7 +28,6 @@ export default function MapActivityPicker({
   const [hora, setHora] = useState('');
   const [loadingGeo, setLoadingGeo] = useState(false);
 
-  // Intentar geolocalizar el destino si no está en la base predefinida
   useEffect(() => {
     const known = findDestination(destinationName);
     if (known) {
@@ -62,7 +60,6 @@ export default function MapActivityPicker({
     return () => controller.abort();
   }, [destinationName]);
 
-  // Inicializar Leaflet map
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -86,7 +83,6 @@ export default function MapActivityPicker({
 
     markersMapRef.current.clear();
 
-    // Crear marcadores para lugares sugeridos
     if (destInfo.places && destInfo.places.length > 0) {
       destInfo.places.forEach((place, index) => {
         const marker = L.marker(place.coordinates, {
@@ -112,7 +108,6 @@ export default function MapActivityPicker({
       });
     }
 
-    // Permitir hacer clic en cualquier lugar del mapa para crear un punto personalizado
     map.on('click', (e) => {
       const { lat, lng } = e.latlng;
       if (customMarkerRef.current) {
@@ -172,7 +167,6 @@ export default function MapActivityPicker({
   return (
     <div className="map-picker-backdrop" role="dialog" aria-modal="true" aria-labelledby="picker-title">
       <div className="map-picker-modal">
-        {/* Cabecera del modal */}
         <div className="map-picker-header">
           <div>
             <span className="eyebrow">
@@ -196,7 +190,6 @@ export default function MapActivityPicker({
           </button>
         </div>
 
-        {/* Contenido principal: Lista de lugares a la izquierda y mapa a la derecha */}
         <div className="map-picker-body">
           <aside className="picker-places-list" aria-label="Lugares sugeridos">
             <h4>
@@ -246,7 +239,6 @@ export default function MapActivityPicker({
           </div>
         </div>
 
-        {/* Barra inferior de confirmación */}
         <div className="map-picker-footer">
           <div className="picker-selected-summary">
             {selectedPlace ? (

@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import React from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
@@ -28,7 +27,7 @@ test('actualiza el total entre días y retira la alerta al eliminar el exceso', 
   expect(screen.queryByRole('alert')).toBeNull();
   fireEvent.click(screen.getByText('Día 2'));
   agregar('Tour', '40000');
-  expect(screen.queryByRole('alert')).toBeNull(); // Igualar el límite no lo excede.
+  expect(screen.queryByRole('alert')).toBeNull();
   agregar('Entrada', '0.01');
   expect(within(resumen).getByText(formatearCosto(100000.01), { normalizer: (text) => text })).toBeTruthy();
   expect(screen.getByRole('alert').textContent).toContain('Presupuesto excedido');

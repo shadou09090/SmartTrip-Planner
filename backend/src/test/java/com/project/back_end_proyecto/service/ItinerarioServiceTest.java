@@ -20,7 +20,6 @@ class ItinerarioServiceTest {
     @Test
     @DisplayName("Criterio 1: Debe calcular tiempos a pie, transporte público y en auto entre dos ubicaciones válidas")
     void testCalcularTrasladoTresModos() {
-        // Museo del Oro a Plaza de Bolívar en Bogotá
         TrasladoRequest request = new TrasladoRequest(
                 "Museo del Oro", 4.6019, -74.0720,
                 "Plaza de Bolívar", 4.5981, -74.0758
@@ -44,7 +43,6 @@ class ItinerarioServiceTest {
     @Test
     @DisplayName("Criterio 2: Debe activar advertencia visual si el tiempo estimado supera los 120 minutos")
     void testAdvertenciaSupera120Minutos() {
-        // Bogotá a Zipaquirá (~50 km) - a pie toma más de 600 minutos (> 120 min)
         TrasladoRequest request = new TrasladoRequest(
                 "Plaza de Bolívar Bogotá", 4.5981, -74.0758,
                 "Catedral de Sal Zipaquirá", 5.0192, -74.0044
@@ -66,11 +64,9 @@ class ItinerarioServiceTest {
                 "Punto B", 4.6019, -74.0720
         );
 
-        // Primera llamada
         TrasladoResponse r1 = itinerarioService.calcularTraslado(request);
         assertFalse(r1.isDesdeCache());
 
-        // Segunda llamada con las mismas coordenadas
         TrasladoResponse r2 = itinerarioService.calcularTraslado(request);
         assertTrue(r2.isDesdeCache(), "La segunda consulta debe indicar que proviene de la caché");
         assertEquals(r1.getDistanciaKm(), r2.getDistanciaKm());

@@ -87,7 +87,6 @@ export function getAllKnownPlaces() {
 export function resolveCoordinates(locationText, destinationName = '') {
   if (!locationText) return null;
 
-  // Direct lat,lon format: "4.6019, -74.072"
   const coordsMatch = String(locationText).match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
   if (coordsMatch) {
     const lat = parseFloat(coordsMatch[1]);
@@ -99,7 +98,6 @@ export function resolveCoordinates(locationText, destinationName = '') {
 
   const query = locationText.toLowerCase().trim();
 
-  // 1. Look in current destination places first
   const currentDest = findDestination(destinationName);
   if (currentDest) {
     const match = currentDest.places.find(
@@ -111,7 +109,6 @@ export function resolveCoordinates(locationText, destinationName = '') {
     if (match) return match.coordinates;
   }
 
-  // 2. Look across all places
   const allPlaces = getAllKnownPlaces();
   const globalMatch = allPlaces.find(
     (p) =>

@@ -48,10 +48,6 @@ public class ItinerarioController {
         }
     }
 
-    /**
-     * HU-010: Endpoint para calcular los tiempos estimados de traslado
-     * entre dos actividades consecutivas (a pie, transporte público y automóvil).
-     */
     @PostMapping("/calcular-traslado")
     public ResponseEntity<TrasladoResponse> calcularTraslado(@RequestBody TrasladoRequest request) {
         try {

@@ -1,16 +1,7 @@
-/**
- * Servicio para el cálculo de tiempos de traslado entre actividades (HU-010).
- * Soporta modos: A pie, Transporte público, y En automóvil.
- * Implementa caché en memoria y localStorage para respuesta instantánea sin demora perceptible (Criterio 3).
- * Identifica traslados que superan los 120 minutos para advertencia visual (Criterio 2).
- */
-
 const CACHE_STORAGE_KEY = 'smarttrip_travel_times_cache_v1';
 
-// Memoria caché volátil para acceso inmediato O(1)
 const memoryCache = new Map();
 
-// Cargar caché previo desde localStorage si está disponible
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
     const persisted = localStorage.getItem(CACHE_STORAGE_KEY);
@@ -32,16 +23,11 @@ function persistCache() {
       });
       localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(obj));
     }
-  } catch (e) {
-    // Quota exceeded o entorno restringido
-  }
+  } catch (e) {}
 }
 
-/**
- * Fórmula de Haversine para distancia en kilómetros
- */
 export function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radio de la Tierra en km
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -53,13 +39,9 @@ export function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const straightDistance = R * c;
 
-  // Factor de desvío urbano (~1.3x para curvas y vías reales en ciudad)
   return Math.round(straightDistance * 1.3 * 100) / 100;
 }
 
-/**
- * Formatea minutos a representación legible: ej. "18 min", "1 h 45 min", "2 h 10 min"
- */
 export function formatDuration(minutes) {
   if (!minutes || minutes <= 0) return '1 min';
   if (minutes < 60) return `${minutes} min`;
@@ -69,9 +51,6 @@ export function formatDuration(minutes) {
   return `${hours} h ${remainingMinutes} min`;
 }
 
-/**
- * Genera clave única y normalizada para la caché
- */
 export function generateCacheKey(coords1, coords2, name1 = '', name2 = '') {
   if (coords1 && coords2) {
     const lat1 = Number(coords1[0]).toFixed(4);
@@ -85,15 +64,6 @@ export function generateCacheKey(coords1, coords2, name1 = '', name2 = '') {
   return `names:${clean1}->${clean2}`;
 }
 
-/**
- * Calcula los tiempos estimados para:
- * 1. A pie
- * 2. Transporte público
- * 3. En automóvil
- *
- * Aplica Criterio 2: Flag `exceeds120: true` cuando el tiempo supera los 120 minutos.
- * Aplica Criterio 3: Recupera de memoria/localStorage de inmediato (`fromCache: true`) sin demoras perceptibles.
- */
 export function getEstimatedTravelTimes(origin, destination) {
   const coords1 = origin?.coordenadas || origin?.coordinates;
   const coords2 = destination?.coordenadas || destination?.coordinates;
@@ -107,7 +77,6 @@ export function getEstimatedTravelTimes(origin, destination) {
 
   const cacheKey = generateCacheKey(coords1, coords2, name1, name2);
 
-  // Criterio 3: Consulta previa en caché
   if (memoryCache.has(cacheKey)) {
     const cached = memoryCache.get(cacheKey);
     return {
@@ -117,7 +86,6 @@ export function getEstimatedTravelTimes(origin, destination) {
     };
   }
 
-  // Distancia calculada
   const distanceKm = calculateHaversineDistance(
     coords1[0],
     coords1[1],
@@ -125,22 +93,18 @@ export function getEstimatedTravelTimes(origin, destination) {
     coords2[1]
   );
 
-  // 1. A pie: ~4.6 km/h de velocidad promedio caminando
   const walkingMinutes = Math.max(1, Math.round((distanceKm / 4.6) * 60));
 
-  // 2. Transporte público: ~18 km/h en ciudad + 10 min promedio de espera/paradas
   const transitMinutes = Math.max(
     3,
     Math.round(10 + (distanceKm / 18) * 60)
   );
 
-  // 3. En automóvil: ~32 km/h en tránsito urbano + 4 min de semáforos/estacionamiento
   const drivingMinutes = Math.max(
     2,
     Math.round(4 + (distanceKm / 32) * 60)
   );
 
-  // Criterio 2: Tiempo > 120 minutos activa advertencia visual
   const UMBRAL_ADVERTENCIA = 120;
 
   const result = {
@@ -185,38 +149,25 @@ export function getEstimatedTravelTimes(origin, destination) {
     calculatedAt: new Date().toISOString(),
   };
 
-  // Guardar en caché para futuras consultas instantáneas (Criterio 3)
   memoryCache.set(cacheKey, result);
   persistCache();
 
   return result;
 }
 
-/**
- * Permite limpiar la caché si es necesario (para pruebas o reseteo)
- */
 export function clearTravelTimeCache() {
   memoryCache.clear();
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.removeItem(CACHE_STORAGE_KEY);
     }
-  } catch (e) {
-    // Ignorar en entornos sin window
-  }
+  } catch (e) {}
 }
 
-/**
- * Consulta el tamaño de la caché en memoria
- */
 export function getCacheSize() {
   return memoryCache.size;
 }
 
-/**
- * Intenta consultar el tiempo de traslado al backend de Spring Boot (POST /api/itinerario/calcular-traslado).
- * Si tiene éxito, actualiza la caché; si falla o no está disponible, no interrumpe el flujo.
- */
 export async function fetchBackendTravelTimes(origin, destination) {
   const coords1 = origin?.coordenadas || origin?.coordinates;
   const coords2 = destination?.coordenadas || destination?.coordinates;
@@ -247,8 +198,6 @@ export async function fetchBackendTravelTimes(origin, destination) {
       const data = await res.json();
       return data;
     }
-  } catch (err) {
-    // Si el backend no está disponible, continuamos transparentemente en local
-  }
+  } catch (err) {}
   return null;
 }

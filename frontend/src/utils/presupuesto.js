@@ -1,4 +1,3 @@
-// Calcular en centavos evita alertas falsas por redondeo decimal.
 export function costoEnCentavos(valor) {
   if (typeof valor !== 'number' && typeof valor !== 'string') return null;
   if (typeof valor === 'string' && !/^\d+(\.\d{1,2})?$/.test(valor.trim())) return null;

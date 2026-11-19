@@ -22,7 +22,6 @@ public class AuthService {
     public LoginResponse login(LoginRequest request) {
         String email = request.getEmail().trim();
 
-        // mismo error si el correo no existe o la clave falla
         User user = userRepository.findByEmail(email)
                 .orElseThrow(CredencialesInvalidasException::new);
 

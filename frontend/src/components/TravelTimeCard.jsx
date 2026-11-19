@@ -6,9 +6,7 @@ import {
   AlertTriangle,
   Zap,
   Navigation,
-  ArrowRight,
-  Clock,
-  Info
+  ArrowRight
 } from 'lucide-react';
 import { getEstimatedTravelTimes } from '../services/travelTimeService';
 
@@ -32,11 +30,9 @@ export default function TravelTimeCard({
 
   return (
     <div className={`travel-time-card ${hasAnyExceeds120 ? 'has-warning' : ''}`} aria-label="Tiempo de traslado entre actividades">
-      {/* Conectores visuales superior e inferior */}
       <div className="travel-connector-line" />
 
       <div className="travel-card-inner">
-        {/* Encabezado del traslado */}
         <div className="travel-card-header">
           <div className="travel-route-info">
             <span className="travel-badge">
@@ -65,9 +61,7 @@ export default function TravelTimeCard({
           </div>
         </div>
 
-        {/* Tarjetas de los tres modos (Criterio 1: a pie, transporte público, automóvil) */}
         <div className="travel-modes-grid">
-          {/* 1. A pie */}
           <div
             className={`travel-mode-item ${selectedMode === 'walking' ? 'active' : ''} ${
               modes.walking.exceeds120 ? 'mode-warning' : ''
@@ -88,7 +82,6 @@ export default function TravelTimeCard({
 
             <div className="mode-time-container">
               <span className="mode-time">{modes.walking.timeFormatted}</span>
-              {/* Criterio 2: Advertencia visual si supera 120 minutos */}
               {modes.walking.exceeds120 && (
                 <span className="warning-pill" title="El tiempo de traslado supera los 120 minutos (2 horas)">
                   <AlertTriangle size={13} /> +120 min
@@ -99,7 +92,6 @@ export default function TravelTimeCard({
             <span className="mode-note">{modes.walking.speedNote}</span>
           </div>
 
-          {/* 2. Transporte público */}
           <div
             className={`travel-mode-item ${selectedMode === 'transit' ? 'active' : ''} ${
               modes.transit.exceeds120 ? 'mode-warning' : ''
@@ -120,7 +112,6 @@ export default function TravelTimeCard({
 
             <div className="mode-time-container">
               <span className="mode-time">{modes.transit.timeFormatted}</span>
-              {/* Criterio 2: Advertencia visual si supera 120 minutos */}
               {modes.transit.exceeds120 && (
                 <span className="warning-pill" title="El tiempo de traslado supera los 120 minutos (2 horas)">
                   <AlertTriangle size={13} /> +120 min
@@ -131,7 +122,6 @@ export default function TravelTimeCard({
             <span className="mode-note">{modes.transit.speedNote}</span>
           </div>
 
-          {/* 3. En automóvil */}
           <div
             className={`travel-mode-item ${selectedMode === 'driving' ? 'active' : ''} ${
               modes.driving.exceeds120 ? 'mode-warning' : ''
@@ -152,7 +142,6 @@ export default function TravelTimeCard({
 
             <div className="mode-time-container">
               <span className="mode-time">{modes.driving.timeFormatted}</span>
-              {/* Criterio 2: Advertencia visual si supera 120 minutos */}
               {modes.driving.exceeds120 && (
                 <span className="warning-pill" title="El tiempo de traslado supera los 120 minutos (2 horas)">
                   <AlertTriangle size={13} /> +120 min
@@ -164,7 +153,6 @@ export default function TravelTimeCard({
           </div>
         </div>
 
-        {/* Criterio 2: Mensaje de advertencia para evaluar viabilidad de la planificación */}
         {hasAnyExceeds120 && (
           <div className="travel-warning-banner" role="alert">
             <AlertTriangle size={18} className="warning-banner-icon" />

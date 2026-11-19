@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 import React, { useState, useEffect, useMemo } from 'react';
-=======
-import React, { useState, useEffect } from 'react';
 import { costoEnCentavos, resumirPresupuesto, formatearCosto } from '../utils/presupuesto';
->>>>>>> origin/hu-007-control-presupuesto
 import {
   Calendar,
   CalendarDays,
@@ -33,25 +29,19 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
-  const [conexionBackend, setConexionBackend] = useState(null); // true = backend, false = local
+  const [conexionBackend, setConexionBackend] = useState(null);
 
-  // Campos para la nueva actividad en el día seleccionado
   const [nuevaActividadTexto, setNuevaActividadTexto] = useState('');
   const [nuevaActividadHora, setNuevaActividadHora] = useState('');
-<<<<<<< HEAD
   const [nuevaActividadUbicacion, setNuevaActividadUbicacion] = useState('');
+  const [nuevaActividadCosto, setNuevaActividadCosto] = useState('0');
+  const [errorCosto, setErrorCosto] = useState('');
 
-  // Lugares recomendados para el destino actual
   const lugaresRecomendados = useMemo(() => {
     const dest = findDestination(destino);
     return dest ? dest.places : [];
   }, [destino]);
-=======
-  const [nuevaActividadCosto, setNuevaActividadCosto] = useState('0');
-  const [errorCosto, setErrorCosto] = useState('');
->>>>>>> origin/hu-007-control-presupuesto
 
-  // Si se reciben datos de un viaje creado previamente, auto-generar el espacio
   useEffect(() => {
     if (tripData?.startDate && tripData?.endDate) {
       setFechaInicio(tripData.startDate);
@@ -61,7 +51,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
     }
   }, [tripData]);
 
-  // Función para calcular días en el cliente como fallback resiliente
   const generarDiasLocalmente = (inicioStr, finStr) => {
     const inicio = new Date(`${inicioStr}T00:00:00`);
     const fin = new Date(`${finStr}T00:00:00`);
@@ -105,7 +94,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
     setCargando(true);
 
     try {
-      // Intento de conexión con el backend de Spring Boot (HU-004)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3500);
 
@@ -120,7 +108,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
 
       if (respuesta.ok) {
         const datos = await respuesta.json();
-        // Mapear días desde el backend
         const diasBackend = (datos.dias || []).map((dia, idx) => ({
           id: dia.id || `dia-${idx + 1}`,
           numero: idx + 1,
@@ -134,12 +121,14 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                     texto: act,
                     hora: '',
                     ubicacion: act,
-                    coordenadas: coords
+                    coordenadas: coords,
+                    costo: 0
                   };
                 }
                 return {
                   ...act,
-                  coordenadas: act.coordenadas || resolveCoordinates(act.ubicacion || act.texto, destino)
+                  coordenadas: act.coordenadas || resolveCoordinates(act.ubicacion || act.texto, destino),
+                  costo: act.costo ?? 0
                 };
               })
             : []
@@ -154,8 +143,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
         throw new Error('Respuesta no satisfactoria del backend');
       }
     } catch (err) {
-      // Fallback local resiliente
-      console.warn('Backend no disponible, generando itinerario en modo local:', err);
       const diasCalculados = generarDiasLocalmente(inicio, fin);
       setItinerario(diasCalculados);
       setConexionBackend(false);
@@ -172,26 +159,20 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
     generarEspacioItinerario(fechaInicio, fechaFin);
   };
 
-  // Seleccionar un día específico
   const handleSeleccionarDia = (diaId) => {
     setDiaSeleccionado((prev) => (prev === diaId ? null : diaId));
     setNuevaActividadTexto('');
     setNuevaActividadHora('');
-<<<<<<< HEAD
     setNuevaActividadUbicacion('');
-=======
     setNuevaActividadCosto('0');
     setErrorCosto('');
->>>>>>> origin/hu-007-control-presupuesto
   };
 
-  // Cargar actividad desde chip recomendado
   const handleSelectChipLugar = (lugar) => {
     setNuevaActividadTexto(lugar.name);
     setNuevaActividadUbicacion(lugar.name);
   };
 
-  // Agregar actividad al día seleccionado con soporte de ubicación y coordenadas
   const handleAgregarActividad = (diaId, e) => {
     e?.preventDefault();
 
@@ -202,8 +183,8 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
       return;
     }
 
-    const ubicacionFinal = (nuevaActividadUbicacion || nuevaActividadTexto).trim();
-    const coordenadasResueltas = resolveCoordinates(ubicacionFinal, destino);
+    const ubicacionFinal = nuevaActividadUbicacion.trim();
+    const coordenadasResueltas = resolveCoordinates(ubicacionFinal || nuevaActividadTexto, destino);
 
     setItinerario((prevDias) =>
       prevDias.map((dia) => {
@@ -212,12 +193,9 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
             id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             texto: nuevaActividadTexto.trim(),
             hora: nuevaActividadHora.trim(),
-<<<<<<< HEAD
             ubicacion: ubicacionFinal,
-            coordenadas: coordenadasResueltas
-=======
+            coordenadas: coordenadasResueltas,
             costo: centavos / 100
->>>>>>> origin/hu-007-control-presupuesto
           };
           return {
             ...dia,
@@ -230,11 +208,11 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
 
     setNuevaActividadTexto('');
     setNuevaActividadHora('');
-<<<<<<< HEAD
     setNuevaActividadUbicacion('');
+    setNuevaActividadCosto('0');
+    setErrorCosto('');
   };
 
-  // Cargar actividades de demostración con traslados para probar inmediatamente la HU-010
   const handleCargarDemoActividades = (diaId) => {
     const dest = findDestination(destino);
     let actividadesDemo = [];
@@ -246,46 +224,51 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
           texto: 'Recorrido histórico por la Ciudad Amurallada',
           hora: '09:00 AM',
           ubicacion: 'Ciudad Amurallada, Cartagena',
-          coordenadas: [10.4236, -75.5503]
+          coordenadas: [10.4236, -75.5503],
+          costo: 0
         },
         {
           id: `demo-${Date.now()}-2`,
           texto: 'Almuerzo y artesanías en Getsemaní',
           hora: '12:30 PM',
           ubicacion: 'Barrio Getsemaní, Cartagena',
-          coordenadas: [10.4204, -75.5445]
+          coordenadas: [10.4204, -75.5445],
+          costo: 45000
         },
         {
           id: `demo-${Date.now()}-3`,
           texto: 'Excursión a las Islas del Rosario (Traslado prolongado)',
           hora: '03:30 PM',
           ubicacion: 'Islas del Rosario, Cartagena',
-          coordenadas: [10.1789, -75.7486]
+          coordenadas: [10.1789, -75.7486],
+          costo: 120000
         }
       ];
     } else {
-      // Default demo en Bogotá con trayecto corto y trayecto largo (+120 min caminando para Criterio 2)
       actividadesDemo = [
         {
           id: `demo-${Date.now()}-1`,
           texto: 'Visita guiada al Museo del Oro',
           hora: '09:00 AM',
           ubicacion: 'Museo del Oro, Bogotá',
-          coordenadas: [4.6019, -74.0720]
+          coordenadas: [4.6019, -74.0720],
+          costo: 5000
         },
         {
           id: `demo-${Date.now()}-2`,
           texto: 'Paseo histórico por la Plaza de Bolívar',
           hora: '11:00 AM',
           ubicacion: 'Plaza de Bolívar, Bogotá',
-          coordenadas: [4.5981, -74.0758]
+          coordenadas: [4.5981, -74.0758],
+          costo: 0
         },
         {
           id: `demo-${Date.now()}-3`,
           texto: 'Excursión a la Catedral de Sal de Zipaquirá',
           hora: '02:30 PM',
           ubicacion: 'Catedral de Sal de Zipaquirá',
-          coordenadas: [5.0192, -74.0044]
+          coordenadas: [5.0192, -74.0044],
+          costo: 60000
         }
       ];
     }
@@ -301,13 +284,8 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
         return dia;
       })
     );
-=======
-    setNuevaActividadCosto('0');
-    setErrorCosto('');
->>>>>>> origin/hu-007-control-presupuesto
   };
 
-  // Eliminar actividad
   const handleEliminarActividad = (diaId, actividadId) => {
     setItinerario((prevDias) =>
       prevDias.map((dia) => {
@@ -347,7 +325,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
   return (
     <section className="itinerario-page">
       <div className="itinerario-container">
-        {/* Encabezado */}
         <div className="itinerario-header">
           <div className="itinerario-header-top">
             <div className="itinerario-title-group">
@@ -368,50 +345,55 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
             </div>
 
             {itinerario.length > 0 && (
-              <span
-                className={`itinerario-status-pill ${
-                  conexionBackend === false ? 'offline' : ''
-                }`}
-              >
+              <div className="itinerario-badge-status">
                 <CheckCircle2 size={16} />
-                {itinerario.length} {itinerario.length === 1 ? 'día generado' : 'días generados'}
-              </span>
+                <span>
+                  {conexionBackend
+                    ? 'Sincronizado con Backend'
+                    : 'Modo Local Activo'}
+                </span>
+              </div>
             )}
           </div>
 
-          {/* Formulario para ingresar fechas y generar el itinerario */}
-          <form onSubmit={handleSubmitForm} className="itinerario-form">
-            <div className="itinerario-input-group">
-              <label htmlFor="itin-fecha-inicio">
-                <Calendar size={16} /> Fecha de inicio
+          <form className="itinerario-form" onSubmit={handleSubmitForm}>
+            <div className="input-group-inline">
+              <label htmlFor="itinerario-inicio">
+                <Calendar size={15} /> Fecha de Inicio
               </label>
-              <div className="itinerario-input-wrapper">
-                <Calendar size={18} />
-                <input
-                  id="itin-fecha-inicio"
-                  type="date"
-                  value={fechaInicio}
-                  onChange={(e) => setFechaInicio(e.target.value)}
-                  required
-                />
-              </div>
+              <input
+                id="itinerario-inicio"
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                required
+              />
             </div>
 
-            <div className="itinerario-input-group">
-              <label htmlFor="itin-fecha-fin">
-                <Calendar size={16} /> Fecha de fin
+            <div className="input-group-inline">
+              <label htmlFor="itinerario-fin">
+                <Calendar size={15} /> Fecha de Regreso
               </label>
-              <div className="itinerario-input-wrapper">
-                <Calendar size={18} />
-                <input
-                  id="itin-fecha-fin"
-                  type="date"
-                  min={fechaInicio || undefined}
-                  value={fechaFin}
-                  onChange={(e) => setFechaFin(e.target.value)}
-                  required
-                />
-              </div>
+              <input
+                id="itinerario-fin"
+                type="date"
+                value={fechaFin}
+                onChange={(e) => setFechaFin(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="input-group-inline">
+              <label htmlFor="itinerario-destino">
+                <MapPin size={15} /> Destino del Viaje
+              </label>
+              <input
+                id="itinerario-destino"
+                type="text"
+                placeholder="Ej. Cartagena, Bogotá..."
+                value={destino}
+                onChange={(e) => setDestino(e.target.value)}
+              />
             </div>
 
             <button
@@ -432,7 +414,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
           )}
         </div>
 
-        {/* Visualización del Itinerario Estructurado */}
         <section className={`presupuesto-resumen ${presupuesto.excedido ? 'excedido' : ''}`} aria-label="Control de presupuesto">
           <h2>Presupuesto de actividades</h2>
           <dl aria-live="polite" aria-atomic="true">
@@ -447,6 +428,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
           )}
           {presupuesto.limite === null && <p>Define el presupuesto al crear tu viaje para recibir alertas de gastos.</p>}
         </section>
+
         {itinerario.length > 0 ? (
           <div className="itinerario-content">
             <div className="itinerario-meta-bar">
@@ -459,7 +441,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
               </div>
             </div>
 
-            {/* Lista dividida por cada uno de los días */}
             <div className="dias-lista">
               {itinerario.map((dia, index) => {
                 const esSeleccionado = diaSeleccionado === dia.id;
@@ -481,7 +462,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                       }
                     }}
                   >
-                    {/* Encabezado del día */}
                     <div className="dia-card-header">
                       <div className="dia-card-title-group">
                         <div className="dia-numero-badge">
@@ -507,7 +487,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                       </div>
                     </div>
 
-                    {/* Cuerpo: Actividades y tarjetas de traslado entre consecutivas */}
                     <div className="dia-cuerpo" onClick={(e) => e.stopPropagation()}>
                       {tieneActividades ? (
                         <div className="actividades-lista">
@@ -518,7 +497,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                               ? (nextAct.coordenadas || resolveCoordinates(nextAct.ubicacion || nextAct.texto, destino))
                               : null;
 
-                            // Criterio 1: Dos actividades consecutivas para el mismo día con ubicación válida
                             const puedeCalcularTraslado = Boolean(originCoords && destCoords);
 
                             return (
@@ -536,6 +514,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                                         <MapPin size={12} /> {act.ubicacion}
                                       </span>
                                     )}
+                                    <span className="actividad-costo">{formatearCosto((costoEnCentavos(act.costo) ?? 0) / 100)}</span>
                                   </div>
                                   <button
                                     type="button"
@@ -547,32 +526,15 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                                   </button>
                                 </div>
 
-                                {/* Criterio 1, 2 y 3: Tarjeta de traslado entre actividades consecutivas */}
                                 {puedeCalcularTraslado && (
                                   <TravelTimeCard
                                     originActivity={{ ...act, coordenadas: originCoords }}
                                     destinationActivity={{ ...nextAct, coordenadas: destCoords }}
                                   />
                                 )}
-<<<<<<< HEAD
                               </React.Fragment>
                             );
                           })}
-=======
-                                <span className="actividad-texto">{act.texto}</span>
-                                <span className="actividad-costo">{formatearCosto((costoEnCentavos(act.costo) ?? 0) / 100)}</span>
-                              </div>
-                              <button
-                                type="button"
-                                className="btn-eliminar-actividad"
-                                title="Eliminar actividad"
-                                onClick={() => handleEliminarActividad(dia.id, act.id)}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          ))}
->>>>>>> origin/hu-007-control-presupuesto
                         </div>
                       ) : (
                         <div className="dia-vacio-aviso">
@@ -600,7 +562,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                         </div>
                       )}
 
-                      {/* Formulario para agregar actividad */}
                       {esSeleccionado && (
                         <form
                           className="form-agregar-actividad"
@@ -620,7 +581,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                             </button>
                           </div>
 
-                          {/* Chips de sugerencias para lugares conocidos del destino */}
                           {lugaresRecomendados.length > 0 && (
                             <div className="place-chips-section">
                               <span className="place-chips-label">
@@ -646,7 +606,7 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                           <div className="form-actividad-grid">
                             <input
                               type="text"
-                              placeholder="Ej. Visita al museo, Almuerzo típico, Recorrido histórico..."
+                              placeholder="Ej. Desayuno típico en la plaza, Visita al museo, Recorrido histórico..."
                               value={nuevaActividadTexto}
                               onChange={(e) => setNuevaActividadTexto(e.target.value)}
                               autoFocus
@@ -710,7 +670,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
                         </form>
                       )}
 
-                      {/* Botón rápido si no está abierto el formulario pero ya hay actividades */}
                       {!esSeleccionado && tieneActividades && (
                         <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
                           <button
@@ -730,7 +689,6 @@ export default function GeneradorItinerario({ tripData = null, onNavigate = null
             </div>
           </div>
         ) : (
-          /* Estado vacío inicial */
           <div className="itinerario-empty-state">
             <div className="itinerario-empty-icon">
               <CalendarDays size={32} />

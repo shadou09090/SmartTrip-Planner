@@ -20,7 +20,6 @@ public class ItinerarioService {
     @Autowired
     private ViajeRepository viajeRepository;
 
-    // Caché en memoria para responder de inmediato en consultas repetidas (Criterio 3)
     private final ConcurrentHashMap<String, TrasladoResponse> cacheTraslados = new ConcurrentHashMap<>();
 
     public Viaje crearItinerarioVacio(LocalDate fechaInicio, LocalDate fechaFin) {
@@ -50,12 +49,6 @@ public class ItinerarioService {
         throw new RuntimeException("Día no encontrado en el viaje");
     }
 
-    /**
-     * HU-010: Calcula el tiempo estimado de traslado entre dos puntos
-     * para tres medios: a pie, transporte público y automóvil.
-     * Incluye advertencia visual si supera los 120 minutos (Criterio 2)
-     * y utiliza caché para responder sin demora perceptible (Criterio 3).
-     */
     public TrasladoResponse calcularTraslado(TrasladoRequest request) {
         if (request == null || request.getOrigenLat() == null || request.getOrigenLng() == null
                 || request.getDestinoLat() == null || request.getDestinoLng() == null) {
@@ -66,7 +59,6 @@ public class ItinerarioService {
                 request.getOrigenLat(), request.getOrigenLng(),
                 request.getDestinoLat(), request.getDestinoLng());
 
-        // Criterio 3: Si ya se consultó antes, responder desde caché
         if (cacheTraslados.containsKey(cacheKey)) {
             TrasladoResponse cached = cacheTraslados.get(cacheKey);
             TrasladoResponse copy = copiarRespuesta(cached);
@@ -78,19 +70,12 @@ public class ItinerarioService {
                 request.getOrigenLat(), request.getOrigenLng(),
                 request.getDestinoLat(), request.getDestinoLng());
 
-        // Factor de desvío de calles urbanas (1.3x)
         double distanciaRutaKm = Math.round(distancia * 1.3 * 100.0) / 100.0;
 
-        // 1. A pie (~4.6 km/h)
         int minPie = Math.max(1, (int) Math.round((distanciaRutaKm / 4.6) * 60));
-
-        // 2. Transporte público (~18 km/h + 10 min de espera/transbordos)
         int minTransporte = Math.max(3, (int) Math.round(10 + (distanciaRutaKm / 18.0) * 60));
-
-        // 3. Automóvil (~32 km/h + 4 min de tráfico urbano)
         int minAuto = Math.max(2, (int) Math.round(4 + (distanciaRutaKm / 32.0) * 60));
 
-        // Criterio 2: Advertencia si supera los 120 minutos
         boolean pieSupera = minPie > 120;
         boolean transporteSupera = minTransporte > 120;
         boolean autoSupera = minAuto > 120;
@@ -121,7 +106,7 @@ public class ItinerarioService {
     }
 
     private double calcularDistanciaHaversine(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371; // Radio de la tierra en km
+        final int R = 6371;
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)

@@ -13,8 +13,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
-// datos de prueba mientras no se conecte una api real
-// la misma busqueda siempre devuelve los mismos vuelos
 @Component
 public class ProveedorVuelosSimulado implements ProveedorVuelos {
 

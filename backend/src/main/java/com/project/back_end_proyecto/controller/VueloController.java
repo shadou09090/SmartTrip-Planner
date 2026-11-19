@@ -22,7 +22,6 @@ public class VueloController {
         this.vueloService = vueloService;
     }
 
-    // ejemplo: GET /api/vuelos?origen=BOG&destino=CTG&fechaIda=2026-12-01&fechaVuelta=2026-12-05&pasajeros=2
     @GetMapping
     public ResponseEntity<List<VueloDto>> buscar(
             @RequestParam(required = false) String origen,

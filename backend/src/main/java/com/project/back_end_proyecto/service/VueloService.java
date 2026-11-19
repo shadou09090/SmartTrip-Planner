@@ -46,7 +46,6 @@ public class VueloService {
 
         BusquedaVuelos busqueda = new BusquedaVuelos(codigoOrigen, codigoDestino, fechaIda, fechaVuelta, cantidad);
 
-        // ida primero y luego vuelta, del mas barato al mas caro
         return proveedorVuelos.buscar(busqueda).stream()
                 .sorted(Comparator.comparing(VueloDto::tramo).thenComparing(VueloDto::precio))
                 .toList();

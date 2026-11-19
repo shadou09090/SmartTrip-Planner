@@ -1,25 +1,23 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import { test, expect } from 'vitest';
 import {
   calculateHaversineDistance,
   formatDuration,
-  generateCacheKey,
   getEstimatedTravelTimes,
   clearTravelTimeCache,
   getCacheSize,
 } from './travelTimeService.js';
 
 test('calculateHaversineDistance computes reasonable distance', () => {
-  // Museo del Oro to Plaza de Bolívar in Bogotá (~600m straight line)
   const dist = calculateHaversineDistance(4.6019, -74.0720, 4.5981, -74.0758);
-  assert.ok(dist > 0.4 && dist < 1.5, `Distancia esperada entre 0.4 y 1.5 km, obtenida: ${dist}`);
+  expect(dist).toBeGreaterThan(0.4);
+  expect(dist).toBeLessThan(1.5);
 });
 
 test('formatDuration formats minutes accurately', () => {
-  assert.equal(formatDuration(15), '15 min');
-  assert.equal(formatDuration(60), '1 h');
-  assert.equal(formatDuration(125), '2 h 5 min');
-  assert.equal(formatDuration(180), '3 h');
+  expect(formatDuration(15)).toBe('15 min');
+  expect(formatDuration(60)).toBe('1 h');
+  expect(formatDuration(125)).toBe('2 h 5 min');
+  expect(formatDuration(180)).toBe('3 h');
 });
 
 test('Criterio 1: Devuelve tiempos estimados a pie, en transporte público y en automóvil', () => {
@@ -35,22 +33,21 @@ test('Criterio 1: Devuelve tiempos estimados a pie, en transporte público y en 
   };
 
   const resultado = getEstimatedTravelTimes(act1, act2);
-  assert.ok(resultado, 'El resultado debe existir');
-  assert.ok(resultado.modes.walking, 'Debe incluir modo a pie');
-  assert.ok(resultado.modes.transit, 'Debe incluir modo transporte público');
-  assert.ok(resultado.modes.driving, 'Debe incluir modo automóvil');
+  expect(resultado).toBeTruthy();
+  expect(resultado.modes.walking).toBeTruthy();
+  expect(resultado.modes.transit).toBeTruthy();
+  expect(resultado.modes.driving).toBeTruthy();
 
-  assert.ok(resultado.modes.walking.minutes > 0);
-  assert.ok(resultado.modes.transit.minutes > 0);
-  assert.ok(resultado.modes.driving.minutes > 0);
+  expect(resultado.modes.walking.minutes).toBeGreaterThan(0);
+  expect(resultado.modes.transit.minutes).toBeGreaterThan(0);
+  expect(resultado.modes.driving.minutes).toBeGreaterThan(0);
 
-  assert.equal(resultado.fromCache, false, 'La primera consulta no debe venir de caché');
+  expect(resultado.fromCache).toBe(false);
 });
 
 test('Criterio 2: Activa advertencia visual si el tiempo de traslado supera 120 minutos', () => {
   clearTravelTimeCache();
 
-  // Distancia Bogotá a Zipaquirá (~50 km) donde caminando toma > 10 horas (> 600 min)
   const act1 = {
     texto: 'Plaza de Bolívar Bogotá',
     coordenadas: [4.5981, -74.0758]
@@ -61,9 +58,9 @@ test('Criterio 2: Activa advertencia visual si el tiempo de traslado supera 120 
   };
 
   const resultado = getEstimatedTravelTimes(act1, act2);
-  assert.ok(resultado.modes.walking.minutes > 120, 'Caminando debe superar 120 minutos');
-  assert.equal(resultado.modes.walking.exceeds120, true, 'exceeds120 debe ser true para walking');
-  assert.equal(resultado.hasAnyExceeds120, true, 'hasAnyExceeds120 debe ser true');
+  expect(resultado.modes.walking.minutes).toBeGreaterThan(120);
+  expect(resultado.modes.walking.exceeds120).toBe(true);
+  expect(resultado.hasAnyExceeds120).toBe(true);
 });
 
 test('Criterio 3: Recupera de caché en consultas repetidas sin demora', () => {
@@ -78,18 +75,16 @@ test('Criterio 3: Recupera de caché en consultas repetidas sin demora', () => {
     coordenadas: [4.6019, -74.0720]
   };
 
-  // Primera consulta (calcula y guarda)
   const res1 = getEstimatedTravelTimes(act1, act2);
-  assert.equal(res1.fromCache, false);
-  assert.equal(getCacheSize(), 1);
+  expect(res1.fromCache).toBe(false);
+  expect(getCacheSize()).toBe(1);
 
-  // Segunda consulta (obtiene de caché sin demora perceptible)
   const t0 = performance.now();
   const res2 = getEstimatedTravelTimes(act1, act2);
   const t1 = performance.now();
 
-  assert.equal(res2.fromCache, true, 'Debe ser retornado desde caché');
-  assert.equal(res2.distanceKm, res1.distanceKm);
-  assert.equal(res2.modes.walking.minutes, res1.modes.walking.minutes);
-  assert.ok(t1 - t0 < 5, `Tiempo de recuperación debe ser prácticamente 0ms (${t1 - t0}ms)`);
+  expect(res2.fromCache).toBe(true);
+  expect(res2.distanceKm).toBe(res1.distanceKm);
+  expect(res2.modes.walking.minutes).toBe(res1.modes.walking.minutes);
+  expect(t1 - t0).toBeLessThan(100);
 });

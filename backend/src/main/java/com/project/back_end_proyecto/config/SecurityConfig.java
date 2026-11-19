@@ -46,7 +46,6 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // temporal: sin token todavia no hay forma de autenticar otras rutas
                         .requestMatchers("/api/auth/**", "/api/itinerario/**", "/api/viajes/**",
                                 "/api/vuelos/**").permitAll()
                         .anyRequest().authenticated()

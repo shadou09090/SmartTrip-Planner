@@ -198,7 +198,6 @@ export default function CreateTrip({
         </div>
 
         <form className="trip-form" onSubmit={handleSubmit} noValidate>
-          {/* Origen (Obligatorio) */}
           <div className="field">
             <label htmlFor="origin">
               Origen <span className="required-star" title="Obligatorio">*</span>
@@ -219,7 +218,6 @@ export default function CreateTrip({
             {errors.origin && <p id="origin-error" className="field-error" role="alert">{errors.origin}</p>}
           </div>
 
-          {/* Destino (Obligatorio) */}
           <div className="field">
             <label htmlFor="destination">
               Destino <span className="required-star" title="Obligatorio">*</span>
@@ -240,7 +238,6 @@ export default function CreateTrip({
             {errors.destination && <p id="destination-error" className="field-error" role="alert">{errors.destination}</p>}
           </div>
 
-          {/* Fecha de inicio (Obligatorio) */}
           <div className="field">
             <label htmlFor="startDate">
               Fecha de inicio <span className="required-star" title="Obligatorio">*</span>
@@ -258,7 +255,6 @@ export default function CreateTrip({
             {errors.startDate && <p id="start-date-error" className="field-error" role="alert">{errors.startDate}</p>}
           </div>
 
-          {/* Fecha de finalización (Obligatorio) */}
           <div className="field">
             <label htmlFor="endDate">
               Fecha de finalización <span className="required-star" title="Obligatorio">*</span>
@@ -277,14 +273,12 @@ export default function CreateTrip({
             {errors.endDate && <p id="end-date-error" className="field-error" role="alert">{errors.endDate}</p>}
           </div>
 
-          {/* Error de rango de fechas si endDate < startDate */}
           {errors.dates && (
             <p id="dates-error" className="form-error field-full" role="alert">
               {errors.dates}
             </p>
           )}
 
-          {/* Nivel de presupuesto (Opcional) */}
           <div className="field field-full budget-level-container">
             <label htmlFor="budget">
               Nivel de presupuesto <span className="optional-tag">(Opcional)</span>
@@ -325,7 +319,6 @@ export default function CreateTrip({
             {errors.budget && <p id="budget-error" className="field-error" role="alert">{errors.budget}</p>}
           </div>
 
-          {/* Intereses y preferencias (Opcional) */}
           <fieldset className="interests field-full">
             <legend>
               Intereses y actividades <span className="optional-tag">(Opcional)</span>
