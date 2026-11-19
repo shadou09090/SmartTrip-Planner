@@ -3,3 +3,4 @@ export { default as Login } from './Login';
 export { default as Register } from './Register';
 export { default as CreateTrip } from './CreateTrip';
 export { default as MapPlaces } from './MapPlaces';
+export { default as MyTrips } from './MyTrips';

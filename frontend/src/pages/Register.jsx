@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlus } from 'lucide-react';
 import { InputGroup, Button } from '../components/ui';
+import { apiRequest } from '../lib/api';
 
 export default function Register({ onNavigate }) {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ export default function Register({ onNavigate }) {
   });
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [success, setSuccess] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -19,19 +21,33 @@ export default function Register({ onNavigate }) {
     if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
     if (formData.password !== formData.confirmPassword) {
       setError('Las contraseñas no coinciden');
       return;
     }
 
     setSubmitted(true);
-    setTimeout(() => {
-      alert(`¡Registro exitoso para ${formData.firstName} ${formData.lastName}!`);
+    try {
+      const message = await apiRequest('/api/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+        }),
+      });
+      setSuccess(typeof message === 'string'
+        ? message
+        : 'Solicitud recibida. Puedes intentar iniciar sesión con ese correo.');
       setSubmitted(false);
-      onNavigate('login');
-    }, 400);
+    } catch (requestError) {
+      setError(requestError.message);
+      setSubmitted(false);
+    }
   };
 
   return (
@@ -41,8 +57,14 @@ export default function Register({ onNavigate }) {
         <p className="message">Regístrate ahora y obtén acceso a nuestra app.</p>
 
         {error && (
-          <div style={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: 600 }}>
+          <div role="alert" style={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: 600 }}>
             {error}
+          </div>
+        )}
+        {success && (
+          <div role="status" style={{ color: '#16a34a', fontSize: '0.85rem', fontWeight: 600 }}>
+            {success}{' '}
+            <button type="button" onClick={() => onNavigate('login')}>Inicia sesión</button>
           </div>
         )}
 

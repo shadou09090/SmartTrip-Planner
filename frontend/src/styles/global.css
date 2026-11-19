@@ -22,6 +22,37 @@ body {
     flex-direction: column;
 }
 
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.35);
+    outline-offset: 3px;
+}
+
+button:disabled {
+    cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 .footer {
     padding: 24px;
     text-align: center;
@@ -30,4 +61,26 @@ body {
     border-top: 1px solid rgba(226, 232, 240, 0.6);
     background: #ffffff;
     margin-top: auto;
+}
+.app-render-error {
+    display: grid;
+    flex: 1;
+    min-height: 60vh;
+    place-items: center;
+    padding: 2rem;
+    background: var(--surface, #f8fafc);
+    color: var(--text, #0f172a);
+}
+
+.app-render-error section {
+    max-width: 36rem;
+    padding: 2rem;
+    border: 1px solid #dbe3ef;
+    border-radius: 1.25rem;
+    background: #fff;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.1);
+}
+
+.app-render-error button {
+    margin-top: 1rem;
 }
