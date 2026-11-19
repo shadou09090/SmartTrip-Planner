@@ -6,6 +6,39 @@ export function hotelBudgetExpenseId(tripId, lodging) {
   return `hotel:${tripId}:${property || 'pending'}`;
 }
 
+/**
+ * The local scenario is the editable draft, while package expenses are the
+ * last server-confirmed baseline. Keep server-only rows and let a local row
+ * with the same stable ID represent the pending edit for that cost.
+ */
+export function mergeBudgetExpenses(localExpenses = [], persistedExpenses = []) {
+  const merged = new Map();
+  for (const expense of Array.isArray(persistedExpenses) ? persistedExpenses : []) {
+    if (expense?.id != null) merged.set(String(expense.id), expense);
+  }
+  for (const expense of Array.isArray(localExpenses) ? localExpenses : []) {
+    if (expense?.id != null) merged.set(String(expense.id), expense);
+  }
+  return [...merged.values()];
+}
+
+export function resolveBudgetExpenseAmount(expense, travelers = 1, days = 1, nights = 0) {
+  if (expense?.confidence === 'UNKNOWN') return null;
+  const unit = Number(expense?.unitAmount ?? expense?.amount);
+  if (!Number.isFinite(unit) || unit < 0) return expense?.amount ?? null;
+  if (expense?.pricingMode === 'per_person') return unit * travelers;
+  if (expense?.pricingMode === 'daily_person') return unit * travelers * days;
+  if (expense?.pricingMode === 'per_night') return unit * nights * Math.max(1, Number(expense.rooms) || 1);
+  return unit;
+}
+
+// The fixed-category editor offers manual estimate or user-confirmed price.
+// A user entering an amount into a DESCONOCIDO row must explicitly create a
+// manual estimate; leaving it as UNKNOWN would intentionally serialize nulls.
+export function budgetEditorConfidence(confidence) {
+  return confidence === 'CONFIRMED' ? 'CONFIRMED' : 'MANUAL_ESTIMATE';
+}
+
 export function calculateGlobalBudget({ total, currency = 'COP', entries = [] }) {
   const seen = new Set();
   let confirmed = 0;

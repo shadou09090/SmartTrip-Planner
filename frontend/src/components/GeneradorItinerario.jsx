@@ -6,7 +6,9 @@ import { buildDraftItinerary, buildTourismDraft, combineTourismCandidates, count
 import { partitionSettledResults } from '../lib/settledSections';
 import { itinerarySignature, readItineraryDraft, removeItineraryDraft, writeItineraryDraft } from '../lib/tripItineraryDraftStorage';
 import { decideWorkspaceHydration } from '../lib/packageWorkspaceSync';
-import { buildPackageSavePayload, classifyPackageSnapshot, countPackageActivities, packageContentSignature, packageIdempotencyKey, packageSaveFailureMessage, restorePackageExpenses } from '../lib/packagePersistence';
+import { restoreSelectedFlightFromPackage } from '../lib/flightOfferDraft';
+import { buildPackageSavePayload, classifyPackageSnapshot, countPackageActivities, packageContentSignature, packageDifferencePaths, packageIdempotencyKey, packageSaveFailureMessage, restorePackageExpenses } from '../lib/packagePersistence';
+import { emptyRecommendationStatus } from '../lib/recommendationSearchStatus';
 import TripGlobalBudget from './TripGlobalBudget';
 import { useTripPackageWorkspace, useWorkspaceState } from './TripPackageWorkspace';
 
@@ -18,6 +20,7 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
   const [persistedPackageTravelers, setPersistedPackageTravelers] = useState(null);
   const [packageSyncStatus, setPackageSyncStatus] = useState('loading');
   const [packageConflict, setPackageConflict] = useState(null);
+  const [packageSaveStatus, setPackageSaveStatus] = useState('idle');
   const [lodging, setLodging] = useState(null);
   const [availableActivities, setAvailableActivities] = useState([]);
   const [recommendations, setRecommendations] = useState({ requiereSeleccionarIntereses: false, actividades: [] });
@@ -134,6 +137,7 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
     && (workspace?.savedPackageSignature
       ? packageContentSignature(currentPackagePayload) !== workspace.savedPackageSignature
       : Boolean(packageFlight || packageLodging || globalBudgetScenario?.scenarioExpenses?.length || effectiveActivityCount));
+  const budgetPackageStatus = packageConflict ? 'conflict' : packageSyncStatus;
   const packageSyncReady = !packagePersistenceEnabled || ['ready', 'not-found'].includes(packageSyncStatus);
   const hasSavablePackage = hasSavablePlan || packageContentDirty;
   const pendingSaveCount = orderedAssignments(draftReconciliation.external, draftExternalOrder).length
@@ -225,7 +229,7 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
             ...trip, travelers: savedPackage.paquete?.viaje?.numeroViajeros ?? trip.travelers,
           }));
           setPersistedPackageTravelers(savedPackage.paquete?.viaje?.numeroViajeros ?? null);
-          const serverFlight = flightSelectionFromPackage(savedPackage.paquete?.vueloSeleccionado);
+          const serverFlight = restoreSelectedFlightFromPackage(savedPackage.paquete?.vueloSeleccionado);
           const serverLodging = lodgingSelectionFromPackage(savedPackage.paquete?.alojamiento) || fulfilled.lodging || null;
           // A null snapshot field is absence of a package selection, not a command
           // to erase an unsaved selection restored from this user's local workspace.
@@ -639,7 +643,7 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
     }));
     setPersistedPackageTravelers(verifiedPackage.paquete?.viaje?.numeroViajeros ?? null);
     const savedLodging = lodgingSelectionFromPackage(verifiedPackage.paquete?.alojamiento);
-    workspace?.setSelectedFlight?.(flightSelectionFromPackage(verifiedPackage.paquete?.vueloSeleccionado));
+    workspace?.setSelectedFlight?.(restoreSelectedFlightFromPackage(verifiedPackage.paquete?.vueloSeleccionado));
     if (savedLodging) {
       workspace?.setSelectedLodging?.(savedLodging);
       setLodging(savedLodging);
@@ -647,6 +651,7 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
     workspace?.setPackageRevision?.(verifiedPackage.revision || 0);
     workspace?.setSavedPackageSignature?.(packageContentSignature(verifiedPackage));
     setPackageSyncStatus('ready');
+    setPackageSaveStatus('verified');
     setPackageConflict(null);
     removeItineraryDraft(safeLocalStorage(), userId, trip.id);
     setDraftStorageStatus('none');
@@ -684,7 +689,7 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
       ...trip, travelers: remote.paquete.viaje?.numeroViajeros ?? trip.travelers,
     }));
     setPersistedPackageTravelers(remote.paquete.viaje?.numeroViajeros ?? null);
-    workspace?.setSelectedFlight?.(flightSelectionFromPackage(remote.paquete.vueloSeleccionado));
+    workspace?.setSelectedFlight?.(restoreSelectedFlightFromPackage(remote.paquete.vueloSeleccionado));
     workspace?.setSelectedLodging?.(lodgingSelectionFromPackage(remote.paquete.alojamiento));
     workspace?.setPackageRevision?.(remote.revision || 0);
     workspace?.setSavedPackageSignature?.(packageContentSignature(remote));
@@ -730,9 +735,10 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
         if (remoteState === 'conflict' || remoteState === 'remote-removed') {
           setPackageConflict({ remotePackage, localPayload, detectedAt: new Date().toISOString() });
           setPackageSyncStatus('conflict');
+          const differingFields = remotePackage ? packageDifferencePaths(localPayload, remotePackage) : [];
           setError(remoteState === 'remote-removed'
             ? 'El paquete que servía como base ya no está en Oracle. Se conservó el borrador y no se envió el PUT.'
-            : 'El paquete remoto cambió desde que se abrió. Se descargó su revisión, se conservó el borrador y no se envió el PUT. Elige cómo resolver el conflicto.');
+            : `El paquete remoto difiere del borrador local${differingFields.length ? ` en: ${differingFields.join(', ')}` : ''}. No se envió el PUT; el borrador se conservó. Elige cómo resolver el conflicto.`);
           return;
         }
         if (remoteState === 'already-saved' && remotePackage) {
@@ -746,12 +752,14 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
           workspace?.setSavedPackageSignature?.(packageContentSignature(remotePackage));
         }
         const key = packageIdempotencyKey(payload, trip.id);
+        setPackageSaveStatus('saving');
         await apiRequest(`/api/viajes/${trip.id}/paquete`, { method: 'PUT', token,
           headers: { 'Idempotency-Key': key }, body: JSON.stringify(payload) });
         packagePutConfirmed = true;
         const verifiedPackage = await apiRequest(`/api/viajes/${trip.id}/paquete`, { token });
-        if (packageContentSignature(payload) !== packageContentSignature(verifiedPackage)) {
-          throw new Error('El servidor respondió, pero el paquete recuperado no coincide. Se conserva el borrador local.');
+        const verificationDifferences = packageDifferencePaths(payload, verifiedPackage);
+        if (verificationDifferences.length > 0) {
+          throw new Error(`El servidor respondió, pero el paquete recuperado difiere en: ${verificationDifferences.join(', ')}. Se conserva el borrador local.`);
         }
         applyVerifiedPackage(verifiedPackage, `Paquete guardado y verificado mediante GET (revisión ${verifiedPackage.revision}).`);
         return;
@@ -855,8 +863,12 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
     } catch (requestError) {
       if (packagePutConfirmed) {
         setPackageSyncStatus('ready');
+        setPackageSaveStatus('failed');
         setError(`Oracle aceptó el PUT, pero no se pudo confirmar la lectura GET (${requestError.message}). No se muestra éxito ni se elimina el borrador. Reintenta: se comparará el snapshot remoto y se reconocerá la misma escritura si ya quedó confirmada.`);
-      } else setError(`${packageSaveFailureMessage(requestError)}${saved ? ` Se guardaron ${saved} cambio(s); el resto del borrador sigue visible. Recarga para confirmar el estado guardado antes de reintentar.` : ''}`);
+      } else {
+        if (packagePersistenceEnabled) setPackageSaveStatus('failed');
+        setError(`${packageSaveFailureMessage(requestError)}${saved ? ` Se guardaron ${saved} cambio(s); el resto del borrador sigue visible. Recarga para confirmar el estado guardado antes de reintentar.` : ''}`);
+      }
     } finally { saveInFlightRef.current = false; setSavingDraft(false); }
   };
 
@@ -974,11 +986,18 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
       <div className={`trip-card trip-card--planner${autoCreateDraft ? ' trip-card--package' : ''}`}>
         <div className="trip-heading">
           <div>
-            <p className="eyebrow">{hasPendingPlan ? 'Borrador local' : itinerario?.dias?.length ? 'Itinerario guardado' : 'Planificación lista'}</p>
+            <p className="eyebrow">{hasPendingPlan ? 'Borrador local'
+              : itinerario?.dias?.some((day) => day.actividades?.length) ? 'Itinerario guardado'
+                : loading ? 'Consultando fuentes'
+                  : autoDraftStatus === 'empty' ? 'Sin candidatos'
+                    : autoDraftStatus === 'error' ? 'Fuentes no disponibles'
+                      : autoDraftStatus === 'limited' ? 'Propuesta incompleta' : 'Planificación disponible'}</p>
             <h2>Itinerario de mi viaje</h2>
             <p>{hasPendingPlan ? 'Las actividades visibles incluyen cambios locales pendientes.'
-              : itinerario?.dias?.length ? 'Mostrando días y actividades guardados en este viaje.'
-                : 'Los días son temporales hasta que confirmes el guardado.'}</p>
+              : itinerario?.dias?.some((day) => day.actividades?.length) ? 'Mostrando días y actividades guardados en este viaje.'
+                : autoDraftStatus === 'empty' || autoDraftStatus === 'error' || autoDraftStatus === 'limited'
+                  ? 'Aún no hay actividades planificadas. Revisa el resultado de fuentes y los motivos de descarte antes de guardar.'
+                  : 'Los días son temporales hasta que confirmes el guardado.'}</p>
           </div>
         </div>
         {error && <p className="form-error" role="alert">{error}</p>}
@@ -991,8 +1010,10 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
           {autoDraftStatus === 'ready' && effectiveActivityCount === 0 && 'La propuesta no contiene actividades actualmente. Puedes volver a generarla; no se guardará nada vacío.'}
           {autoDraftStatus === 'saved' && 'Este viaje ya tiene actividades guardadas. Se conservaron; puedes regenerar desde la sección de itinerario.'}
           {autoDraftStatus === 'limited' && 'No se pudo completar una propuesta automática con los datos actuales. Revisa los descartes y errores de fuentes; puedes reintentar.'}
-          {autoDraftStatus === 'empty' && !loading && 'Las fuentes no entregaron candidatos para planificar. El itinerario sigue disponible para reintentar cuando el servicio responda.'}
-          {autoDraftStatus === 'error' && !loading && 'Falló la consulta de recomendaciones. Las demás secciones siguen disponibles; puedes reintentar la búsqueda.'}
+          {autoDraftStatus === 'empty' && !loading && `${emptyRecommendationStatus(recommendations.diagnostico,
+            recommendations.avisosFuentes, recommendationLoadError)} El itinerario sigue disponible para reintentar.`}
+          {autoDraftStatus === 'error' && !loading && `${emptyRecommendationStatus(recommendations.diagnostico,
+            recommendations.avisosFuentes, recommendationLoadError || 'falló la consulta de recomendaciones')} Las demás secciones siguen disponibles.`}
         </p>}
 
         {recommendations.requiereSeleccionarIntereses && (
@@ -1326,7 +1347,9 @@ export default function GeneradorItinerario({ token, trip, userId, view = 'itine
       <div className="package-budget-view" hidden={view !== 'budget'}>
         <TripGlobalBudget trip={trip} token={token} userId={userId} lodging={packageLodging || lodging} selectedFlight={packageFlight}
           itineraryDays={draftItineraryDays} persistedExpenses={persistedPackageExpenses}
-          persistedTravelers={persistedPackageTravelers} onScenarioChange={updateBudgetScenario} />
+          persistedTravelers={persistedPackageTravelers} onScenarioChange={updateBudgetScenario}
+          packagePersistenceStatus={budgetPackageStatus} packageDirty={packageContentDirty}
+          packageSaveStatus={packageSaveStatus} />
       </div>
     </section>
   );
@@ -1444,25 +1467,6 @@ function packageSnapshotToItinerary(snapshot, tripId) {
       tipoActividad: activity.tipo,
     })),
   })) };
-}
-
-function flightSelectionFromPackage(flight) {
-  if (!flight) return null;
-  const tramos = (flight.tramos || []).map((segment) => ({
-    origin: { iataCode: segment.origenIata }, destination: { iataCode: segment.destinoIata },
-    departingAt: segment.salida, arrivingAt: segment.llegada, numeroTrayecto: segment.numeroTrayecto,
-    marketingCarrier: { name: segment.aerolinea }, marketingCarrierFlightNumber: segment.numeroVuelo,
-  }));
-  return { id: flight.idOferta || flight.vueloId, provider: flight.proveedor,
-    totalAmount: flight.importe, currency: flight.moneda, testData: flight.tipo === 'SANDBOX',
-    origin: { iataCode: flight.origen }, destination: { iataCode: flight.destino },
-    slices: [...new Set(tramos.map((segment) => segment.numeroTrayecto || 1))].sort((a, b) => a - b).map((sliceNumber) => {
-      const segments = tramos.filter((segment) => (segment.numeroTrayecto || 1) === sliceNumber);
-      return { origin: segments[0]?.origin || { iataCode: flight.origen },
-        destination: segments.at(-1)?.destination || { iataCode: flight.destino },
-        departureAt: segments[0]?.departingAt || flight.salida,
-        arrivalAt: segments.at(-1)?.arrivingAt || flight.llegada, segments };
-    }) };
 }
 
 function lodgingSelectionFromPackage(lodging) {

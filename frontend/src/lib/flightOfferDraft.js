@@ -39,3 +39,23 @@ export function getDuffelSliceSummary(offer) {
     segments: slice.segments || [],
   }));
 }
+
+export function restoreSelectedFlightFromPackage(flight) {
+  if (!flight) return null;
+  const tramos = (flight.tramos || []).map((segment) => ({
+    origin: segment.origenIata || '', destination: segment.destinoIata || '',
+    departureAt: segment.salida || '', arrivalAt: segment.llegada || '', numeroTrayecto: segment.numeroTrayecto,
+    marketingCarrier: segment.aerolinea || '', flightNumber: segment.numeroVuelo || '',
+  }));
+  const sliceNumbers = [...new Set(tramos.map((segment) => segment.numeroTrayecto || 1))].sort((a, b) => a - b);
+  return { id: flight.idOferta || flight.vueloId, provider: flight.proveedor,
+    totalAmount: flight.importe, currency: flight.moneda, testData: flight.tipo === 'SANDBOX',
+    origin: flight.origen || '', destination: flight.destino || '',
+    slices: sliceNumbers.map((sliceNumber) => {
+      const segments = tramos.filter((segment) => (segment.numeroTrayecto || 1) === sliceNumber);
+      return { origin: segments[0]?.origin || flight.origen || '',
+        destination: segments.at(-1)?.destination || flight.destino || '',
+        departureAt: segments[0]?.departureAt || flight.salida || '',
+        arrivalAt: segments.at(-1)?.arrivalAt || flight.llegada || '', segments };
+    }) };
+}

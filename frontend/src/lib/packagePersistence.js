@@ -110,20 +110,26 @@ export function buildPackageSavePayload({ trip, days, selectedFlight, lodging, s
     })),
     vueloSeleccionado: selectedFlight ? serializeFlight(selectedFlight) : null,
     alojamiento: lodging ? serializeLodging(lodging) : null,
-    gastos: expenses.slice(0, 500).map((expense) => ({
-      claveEstable: String(expense.id || `expense:${expense.category}:${expense.label}`).slice(0, 160),
-      categoria: String(expense.category || 'OTROS').slice(0, 30),
-      concepto: String(expense.label || expense.category || 'Gasto de viaje').slice(0, 200),
-      costo: {
-        importe: toFiniteNumber(expense.unitAmount ?? expense.amount),
-        moneda: /^[A-Z]{3}$/.test(String(expense.currency || '')) ? expense.currency : null,
-        unidad: expense.pricingMode || 'total', cantidad: expenseQuantity(expense, travelers, tripDays, tripNights),
-        tipo: expenseConfidence(expense.confidence),
-        fuente: expense.source || null,
-        consultadoEn: expense.queriedAt || null,
-        evidencia: expense.rateSource ? `Conversión ${expense.rateToBudget} · ${expense.rateSource} · ${expense.rateDate || ''}` : null,
-      },
-    })),
+    gastos: expenses.slice(0, 500).map((expense) => {
+      const tipo = expenseConfidence(expense.confidence);
+      const unknown = tipo === 'DESCONOCIDO';
+      return {
+        claveEstable: String(expense.id || `expense:${expense.category}:${expense.label}`).slice(0, 160),
+        categoria: String(expense.category || 'OTROS').slice(0, 30),
+        concepto: String(expense.label || expense.category || 'Gasto de viaje').slice(0, 200),
+        costo: {
+          // Old/local scenarios can retain a draft amount after being marked unknown.
+          // Do not send that stale number as a known cost; DESCONOCIDO is explicitly null.
+          importe: unknown ? null : toFiniteNumber(expense.unitAmount ?? expense.amount),
+          moneda: unknown ? null : (/^[A-Z]{3}$/.test(String(expense.currency || '')) ? expense.currency : null),
+          unidad: expense.pricingMode || 'total', cantidad: expenseQuantity(expense, travelers, tripDays, tripNights),
+          tipo,
+          fuente: expense.source || null,
+          consultadoEn: expense.queriedAt || null,
+          evidencia: expense.rateSource ? `Conversión ${expense.rateToBudget} · ${expense.rateSource} · ${expense.rateDate || ''}` : null,
+        },
+      };
+    }),
     asignacionesEliminadas: [],
   };
 }
@@ -158,8 +164,13 @@ function serializeFlight(flight) {
 }
 
 function iataCode(value) {
-  if (typeof value === 'string') return value;
-  return value?.iataCode || value?.iata_code || null;
+  const raw = typeof value === 'string' ? value : value?.iataCode || value?.iata_code;
+  if (typeof raw !== 'string') return null;
+  const normalized = raw.trim();
+  if (/^[A-Z]{3}$/i.test(normalized)) return normalized.toUpperCase();
+  // Duffel place suggestions are rendered as "Airport name (IATA)" by the
+  // provider adapter. Persist the verified code, never the display label.
+  return normalized.match(/\(([A-Z]{3})\)\s*$/i)?.[1]?.toUpperCase() || null;
 }
 
 function serializeLodging(lodging) {
@@ -171,15 +182,93 @@ function serializeLodging(lodging) {
 }
 
 export function canonicalPersistedPackage(value) {
-  const pkg = value?.paquete || value;
+  const pkg = normalizePersistedPackage(value);
   return stableStringify(pkg);
 }
 
 export function packageContentSignature(value) {
-  const pkg = value?.paquete || value;
+  const pkg = normalizePersistedPackage(value);
   if (!pkg || typeof pkg !== 'object') return '';
-  const { revisionEsperada: _revisionEsperada, ...content } = pkg;
-  return stableStringify(content);
+  return stableStringify(pkg);
+}
+
+export function packageDifferencePaths(expectedValue, actualValue, limit = 20) {
+  const expected = normalizePersistedPackage(expectedValue) || {};
+  const actual = normalizePersistedPackage(actualValue) || {};
+  const paths = [];
+  const visit = (left, right, path) => {
+    if (paths.length >= limit || left == null && right == null) return;
+    if (Array.isArray(left) || Array.isArray(right)) {
+      if (!Array.isArray(left) || !Array.isArray(right)) { paths.push(path || 'paquete'); return; }
+      if (left.length !== right.length) paths.push(`${path}.length`);
+      for (let index = 0; index < Math.min(left.length, right.length) && paths.length < limit; index += 1) {
+        visit(left[index], right[index], `${path}[${index}]`);
+      }
+      return;
+    }
+    const leftObject = left && typeof left === 'object';
+    const rightObject = right && typeof right === 'object';
+    if (leftObject || rightObject) {
+      if (!leftObject || !rightObject) { paths.push(path || 'paquete'); return; }
+      const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+      for (const key of keys) {
+        if (key === 'revisionEsperada') continue;
+        const leftValue = left[key] == null ? undefined : left[key];
+        const rightValue = right[key] == null ? undefined : right[key];
+        if (leftValue === undefined && rightValue === undefined) continue;
+        visit(leftValue, rightValue, path ? `${path}.${key}` : key);
+        if (paths.length >= limit) break;
+      }
+      return;
+    }
+    if (stableStringify(left) !== stableStringify(right)) paths.push(path || 'paquete');
+  };
+  visit(expected, actual, '');
+  return paths;
+}
+
+// @AssertTrue helper methods on the Java request DTO were initially serialized
+// by Jackson as bean properties. Treat those derived validation results as
+// transport metadata for backward compatibility; they are not package data.
+// New backend DTOs mark them @JsonIgnore so new snapshots stay clean. Arrays,
+// including days and activities, are deliberately left in their original order.
+function normalizePersistedPackage(value) {
+  const source = value?.paquete || value;
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return source;
+  const omit = (item, keys) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+    const copy = { ...item };
+    keys.forEach((key) => { delete copy[key]; });
+    return copy;
+  };
+  const normalizeCost = (cost) => omit(cost, ['estadoConsistente', 'fechaConsultaValida']);
+  const normalized = omit(source, ['revisionEsperada', 'fechasUnicas', 'clavesAsignacionUnicas']);
+  if (source.viaje) normalized.viaje = omit(source.viaje, ['zonaHorariaValida', 'presupuestoConMoneda']);
+  if (Array.isArray(source.dias)) normalized.dias = source.dias.map((day) => {
+    const normalizedDay = omit(day, ['ordenUnico']);
+    if (Array.isArray(day?.actividades)) normalizedDay.actividades = day.actividades.map((activity) => {
+      const normalizedActivity = omit(activity, ['identidadValida', 'parCoordenadasValido']);
+      if (activity?.costo) normalizedActivity.costo = normalizeCost(activity.costo);
+      return normalizedActivity;
+    });
+    return normalizedDay;
+  });
+  if (source.alojamiento) {
+    normalized.alojamiento = omit(source.alojamiento, ['parCoordenadasValido', 'nombreValido']);
+    if (source.alojamiento.costo) normalized.alojamiento.costo = normalizeCost(source.alojamiento.costo);
+  }
+  if (source.vueloSeleccionado) {
+    normalized.vueloSeleccionado = omit(source.vueloSeleccionado,
+      ['sandboxConsistente', 'monedaConsistente', 'fechaValida']);
+    if (Array.isArray(source.vueloSeleccionado.tramos)) {
+      normalized.vueloSeleccionado.tramos = source.vueloSeleccionado.tramos
+        .map((segment) => omit(segment, ['fechaValida']));
+    }
+  }
+  if (Array.isArray(source.gastos)) normalized.gastos = source.gastos.map((expense) => ({
+    ...expense, ...(expense?.costo ? { costo: normalizeCost(expense.costo) } : {}),
+  }));
+  return normalized;
 }
 
 export function packageIdempotencyKey(payload, tripId) {

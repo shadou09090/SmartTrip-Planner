@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createFlightDraftFromOffer, getDuffelSliceSummary, isSinglePersistableDuffelSlice } from './flightOfferDraft.js';
+import { createFlightDraftFromOffer, getDuffelSliceSummary, isSinglePersistableDuffelSlice, restoreSelectedFlightFromPackage } from './flightOfferDraft.js';
 
 const directOffer = {
   id: 'off_direct', totalAmount: '125.50', currency: 'COP',
@@ -33,4 +33,18 @@ test('keeps connection details visible but prevents flattening multi-segment or 
   assert.equal(isSinglePersistableDuffelSlice(roundTrip), false);
   assert.equal(getDuffelSliceSummary(connection)[0].segments.length, 2);
   assert.equal(getDuffelSliceSummary(roundTrip).length, 2);
+});
+
+test('restores package flight segments as displayable airport strings and keeps Sandbox classification', () => {
+  const flight = restoreSelectedFlightFromPackage({ tipo: 'SANDBOX', proveedor: 'DuffelSandbox', idOferta: 'offer-1',
+    moneda: 'USD', importe: 578.17, origen: 'BOG', destino: 'MAD', tramos: [
+      { origenIata: 'BOG', destinoIata: 'MAD', salida: '2026-12-05T03:05:00Z', llegada: '2026-12-05T20:22:00Z', numeroTrayecto: 1 },
+      { origenIata: 'MAD', destinoIata: 'BOG', salida: '2026-12-08T05:25:00Z', llegada: '2026-12-08T10:42:00Z', numeroTrayecto: 2 },
+    ] });
+  assert.equal(flight.testData, true);
+  assert.equal(flight.slices.length, 2);
+  assert.equal(flight.slices[0].origin, 'BOG');
+  assert.equal(flight.slices[0].segments[0].destination, 'MAD');
+  assert.equal(flight.slices[1].origin, 'MAD');
+  assert.equal(flight.slices[1].segments[0].origin, 'MAD');
 });

@@ -1,6 +1,7 @@
 package com.project.back_end_proyecto.dto.packagepersistence;
 
 import jakarta.validation.Validation;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -13,6 +14,27 @@ import static com.project.back_end_proyecto.dto.packagepersistence.PaqueteGuarda
 import static org.junit.jupiter.api.Assertions.*;
 
 class PaqueteGuardarRequestTest {
+    @Test
+    void validationHelperPropertiesAreNotSerializedIntoThePackageSnapshot() throws Exception {
+        var request = new PaqueteGuardarRequest(0L, packageData(),
+                List.of(day(1, activity("external:geo:abc", TipoActividad.EXTERNA, null,
+                        "Geoapify", "geo:abc", 1))), null, null, List.of(), List.of());
+        var json = new ObjectMapper().writeValueAsString(request);
+
+        assertFalse(json.contains("presupuestoConMoneda"));
+        assertFalse(json.contains("zonaHorariaValida"));
+        assertFalse(json.contains("fechasUnicas"));
+        assertFalse(json.contains("clavesAsignacionUnicas"));
+        assertFalse(json.contains("ordenUnico"));
+        assertFalse(json.contains("identidadValida"));
+        assertFalse(json.contains("parCoordenadasValido"));
+        assertFalse(json.contains("estadoConsistente"));
+        assertFalse(json.contains("fechaConsultaValida"));
+        try (var factory = Validation.buildDefaultValidatorFactory()) {
+            assertTrue(factory.getValidator().validate(request).isEmpty());
+        }
+    }
+
     @Test
     void acceptsFiveDaysWithMixedPersistableActivityKindsAndStableOrder() {
         var days = List.of(

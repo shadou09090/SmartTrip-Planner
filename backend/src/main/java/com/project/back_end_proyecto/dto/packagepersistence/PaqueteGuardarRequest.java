@@ -1,5 +1,6 @@
 package com.project.back_end_proyecto.dto.packagepersistence;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMax;
@@ -62,6 +63,7 @@ public record PaqueteGuardarRequest(
         }
 
         @AssertTrue(message = "La zona horaria debe ser un identificador IANA válido")
+        @JsonIgnore
         public boolean isZonaHorariaValida() {
             if (zonaHoraria == null || zonaHoraria.isBlank()) return true;
             try {
@@ -73,17 +75,20 @@ public record PaqueteGuardarRequest(
         }
 
         @AssertTrue(message = "El presupuesto requiere una moneda explícita")
+        @JsonIgnore
         public boolean isPresupuestoConMoneda() {
             return presupuestoTotal == null || monedaPresupuesto != null && monedaPresupuesto.matches("[A-Z]{3}");
         }
     }
 
     @AssertTrue(message = "Las fechas de los días deben ser únicas")
+    @JsonIgnore
     public boolean isFechasUnicas() {
         return dias == null || dias.stream().map(Dia::fecha).filter(java.util.Objects::nonNull).distinct().count() == dias.size();
     }
 
     @AssertTrue(message = "Las claves de asignación del paquete deben ser únicas")
+    @JsonIgnore
     public boolean isClavesAsignacionUnicas() {
         if (dias == null) return true;
         var keys = new HashSet<String>();
@@ -103,6 +108,7 @@ public record PaqueteGuardarRequest(
         public Dia { actividades = actividades == null ? null : List.copyOf(actividades); }
 
         @AssertTrue(message = "El orden de las actividades debe ser único dentro de cada día")
+        @JsonIgnore
         public boolean isOrdenUnico() {
             if (actividades == null) return true;
             var orders = new HashSet<Integer>();
@@ -133,6 +139,7 @@ public record PaqueteGuardarRequest(
             @NotNull @Valid Costo costo) {
 
         @AssertTrue(message = "La actividad externa requiere fuente e identificador externo; la interna requiere ID")
+        @JsonIgnore
         public boolean isIdentidadValida() {
             if (tipo == null) return true;
             return switch (tipo) {
@@ -144,6 +151,7 @@ public record PaqueteGuardarRequest(
         }
 
         @AssertTrue(message = "Las coordenadas deben enviarse juntas")
+        @JsonIgnore
         public boolean isParCoordenadasValido() { return (latitud == null) == (longitud == null); }
     }
 
@@ -158,6 +166,7 @@ public record PaqueteGuardarRequest(
             @Size(max = 40) String consultadoEn,
             @Size(max = 1000) String evidencia) {
         @AssertTrue(message = "Un costo desconocido no puede incluir importe y un costo con importe requiere moneda")
+        @JsonIgnore
         public boolean isEstadoConsistente() {
             if (tipo == null) return true;
             if (tipo == TipoCosto.DESCONOCIDO) return importe == null && moneda == null;
@@ -167,6 +176,7 @@ public record PaqueteGuardarRequest(
             return moneda != null && moneda.matches("[A-Z]{3}");
         }
         @AssertTrue(message = "La fecha de consulta debe ser ISO-8601")
+        @JsonIgnore
         public boolean isFechaConsultaValida() { return consultadoEn == null || isIsoDateTime(consultadoEn); }
     }
 
@@ -184,10 +194,13 @@ public record PaqueteGuardarRequest(
             @NotEmpty @Size(max = 20) List<@NotNull @Valid TramoVuelo> tramos) {
         public VueloSeleccion { tramos = tramos == null ? null : List.copyOf(tramos); }
         @AssertTrue(message = "Una oferta Sandbox no puede presentarse como cotización real")
+        @JsonIgnore
         public boolean isSandboxConsistente() { return tipo != TipoCosto.SANDBOX || vueloId == null; }
         @AssertTrue(message = "Una tarifa de vuelo requiere moneda si tiene importe")
+        @JsonIgnore
         public boolean isMonedaConsistente() { return importe == null || moneda != null && moneda.matches("[A-Z]{3}"); }
         @AssertTrue(message = "Las fechas del vuelo deben ser ISO-8601")
+        @JsonIgnore
         public boolean isFechaValida() { return (salida == null || isIsoDateTime(salida)) && (llegada == null || isIsoDateTime(llegada)); }
         public VueloSeleccion(Long vueloId, String proveedor, String idOferta, String moneda, BigDecimal importe,
                               TipoCosto tipo, String origen, String destino, LocalDateTime salida,
@@ -207,6 +220,7 @@ public record PaqueteGuardarRequest(
             @Size(max = 50) String numeroVuelo,
             @PositiveOrZero Integer numeroTrayecto) {
         @AssertTrue(message = "Las fechas del tramo deben ser ISO-8601")
+        @JsonIgnore
         public boolean isFechaValida() { return isIsoDateTime(salida) && isIsoDateTime(llegada); }
         public TramoVuelo(String origenIata, String destinoIata, LocalDateTime salida, LocalDateTime llegada,
                           String aerolinea, String numeroVuelo) {
@@ -233,8 +247,10 @@ public record PaqueteGuardarRequest(
             @Positive Integer habitaciones,
             @Positive Integer huespedes) {
         @AssertTrue(message = "Las coordenadas del alojamiento deben enviarse juntas")
+        @JsonIgnore
         public boolean isParCoordenadasValido() { return (latitud == null) == (longitud == null); }
         @AssertTrue(message = "El alojamiento identificado requiere nombre")
+        @JsonIgnore
         public boolean isNombreValido() { return alojamientoId == null && idExterno == null || nombre != null && !nombre.isBlank(); }
     }
 

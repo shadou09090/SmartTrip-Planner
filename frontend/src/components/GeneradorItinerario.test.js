@@ -30,7 +30,9 @@ test('integral package save is opt-in, idempotent, GET-verified, and keeps the l
   assert.match(saveBranch, /method: 'PUT'/);
   assert.match(saveBranch, /Idempotency-Key/);
   const readBack = saveBranch.indexOf('const verifiedPackage = await apiRequest');
-  const compare = saveBranch.indexOf('packageContentSignature(payload) !== packageContentSignature(verifiedPackage)');
+  const compare = saveBranch.indexOf('packageDifferencePaths(payload, verifiedPackage)');
+  assert.match(saveBranch, /verificationDifferences\.length > 0/);
+  assert.ok(saveBranch.includes("difiere en: ${verificationDifferences.join(', ')}. Se conserva el borrador local."));
   const clearDraft = source.indexOf('removeItineraryDraft(safeLocalStorage(), userId, trip.id)', source.indexOf('const applyVerifiedPackage'));
   assert.ok(readBack >= 0 && compare > readBack && clearDraft > compare);
   assert.match(source, /setNotice\(successMessage\)/);
@@ -81,6 +83,18 @@ test('zero assigned activities are a recoverable generation failure and orphaned
   assert.match(source, /'server-changed', 'destination-changed', 'dates-changed'/);
   assert.match(source, /Seleccionados \/ asignados/);
   assert.match(source, /Actividades visibles en borrador/);
+});
+
+test('zero-candidate results do not use a ready planning label and show source diagnostics', async () => {
+  const source = await readFile(new URL('./GeneradorItinerario.jsx', import.meta.url), 'utf8');
+  const status = await readFile(new URL('../lib/recommendationSearchStatus.js', import.meta.url), 'utf8');
+  const statusTests = await readFile(new URL('../lib/recommendationSearchStatus.test.js', import.meta.url), 'utf8');
+  assert.match(source, /autoDraftStatus === 'empty' \? 'Sin candidatos'/);
+  assert.match(source, /emptyRecommendationStatus\(recommendations\.diagnostico/);
+  assert.match(status, /Búsqueda completada sin candidatos elegibles/);
+  assert.match(status, /resultadosConservadosPorFuente/);
+  assert.match(statusTests, /Geoapify: 0 conservados/);
+  assert.match(statusTests, /Wikidata: 0 conservados/);
 });
 
 test('empty itinerary day metadata cannot appear as one saveable item when there are zero activities', async () => {

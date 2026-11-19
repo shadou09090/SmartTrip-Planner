@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { apiRequest } from '../lib/api';
-import { calculateGlobalBudget, hotelBudgetExpenseId } from '../lib/globalBudget';
+import { budgetEditorConfidence, calculateGlobalBudget, hotelBudgetExpenseId, mergeBudgetExpenses,
+  resolveBudgetExpenseAmount } from '../lib/globalBudget';
 import { budgetScenarioStorageKey, clearBudgetScenario, readBudgetScenario, writeBudgetScenario } from '../lib/budgetScenarioStorage';
 import { fetchReferenceExchangeRate } from '../lib/referenceExchangeRate';
+import { budgetPersistenceNotice } from '../lib/budgetPersistenceNotice';
 
 const FIXED_CATEGORIES = [
   { id: 'flight', title: 'Vuelos', legacy: ['Vuelo'], hint: 'Ingresa el total del grupo o por viajero, incluyendo ida y regreso cuando aplique.' },
@@ -25,13 +27,15 @@ const CONFIDENCE_LABELS = {
 const packagePersistenceEnabled = import.meta.env.VITE_SMARTTRIP_PACKAGE_PERSISTENCE === 'true';
 
 export default function TripGlobalBudget({ trip, token, userId, lodging, selectedFlight = null, itineraryDays = [],
-  persistedExpenses = [], persistedTravelers = null, onScenarioChange }) {
+  persistedExpenses = [], persistedTravelers = null, onScenarioChange, packagePersistenceStatus = 'loading',
+  packageDirty = false, packageSaveStatus = 'idle' }) {
   const [flights, setFlights] = useState([]);
   const [flightLoadError, setFlightLoadError] = useState('');
   const scenarioKey = budgetScenarioStorageKey(userId, trip.id);
   const [expenses, setExpenses] = useState([]);
   const [scenarioStorageStatus, setScenarioStorageStatus] = useState('loading');
   const [loadedScenarioKey, setLoadedScenarioKey] = useState(null);
+  const lastScenarioTripId = useRef(String(trip.id ?? ''));
   const [scenarioTravelers, setScenarioTravelers] = useState(initialTravelers(trip));
   const travelers = scenarioTravelers;
   const baseCurrency = /^[A-Z]{3}$/.test(trip.budgetCurrency || '') ? trip.budgetCurrency : 'COP';
@@ -53,24 +57,45 @@ export default function TripGlobalBudget({ trip, token, userId, lodging, selecte
   }, [token, trip.id]);
 
   useEffect(() => {
+    const currentTripId = String(trip.id ?? '');
+    const tripChanged = lastScenarioTripId.current !== currentTripId;
     if (!scenarioKey) {
-      setExpenses([]);
-      setScenarioTravelers(initialTravelers(trip));
-      setScenarioStorageStatus('unavailable');
+      // A temporarily missing account identity must not erase edits already in
+      // this mounted trip. When the trip itself changes, clear the in-memory
+      // scenario so it cannot bleed into a different trip.
+      if (tripChanged) {
+        setExpenses([]);
+        setScenarioTravelers(initialTravelers(trip));
+      }
+      lastScenarioTripId.current = currentTripId;
+      setScenarioStorageStatus(userId == null || String(userId).trim() === '' ? 'identity-missing' : 'trip-identity-missing');
       setLoadedScenarioKey(null);
       return;
     }
-    const restored = readBudgetScenario(localStorageOrNull(), scenarioKey);
+    lastScenarioTripId.current = currentTripId;
+    const storage = localStorageOrNull();
+    if (!storage) {
+      if (tripChanged) {
+        setExpenses([]);
+        setScenarioTravelers(persistedTravelers || initialTravelers(trip));
+      }
+      setScenarioStorageStatus('storage-unavailable');
+      setLoadedScenarioKey(null);
+      return;
+    }
+    const restored = readBudgetScenario(storage, scenarioKey);
     const localExpenses = normalizeLegacyExpenses(restored.expenses, trip.id);
-    setExpenses(localExpenses.length ? localExpenses : (Array.isArray(persistedExpenses) ? persistedExpenses : []));
+    setExpenses(mergeBudgetExpenses(localExpenses, persistedExpenses));
     setScenarioTravelers(restored.travelers || persistedTravelers || initialTravelers(trip));
-    setScenarioStorageStatus(restored.status);
+    setScenarioStorageStatus(restored.status === 'unavailable' ? 'storage-unavailable' : restored.status);
     setLoadedScenarioKey(scenarioKey);
   }, [scenarioKey, trip.travelers, trip.numeroViajeros, persistedExpenses, persistedTravelers]);
 
   useEffect(() => {
     if (scenarioStorageStatus !== 'ready' || !scenarioKey || loadedScenarioKey !== scenarioKey) return;
-    if (!writeBudgetScenario(localStorageOrNull(), scenarioKey, expenses, travelers)) setScenarioStorageStatus('unavailable');
+    const storage = localStorageOrNull();
+    if (!storage) { setScenarioStorageStatus('storage-unavailable'); return; }
+    if (!writeBudgetScenario(storage, scenarioKey, expenses, travelers)) setScenarioStorageStatus('write-failed');
   }, [expenses, loadedScenarioKey, scenarioKey, scenarioStorageStatus, travelers]);
 
   const calculation = useMemo(() => {
@@ -78,7 +103,7 @@ export default function TripGlobalBudget({ trip, token, userId, lodging, selecte
     const activeActivities = uniqueActivities(itineraryDays);
     const entries = expenses.filter((expense) => !expense.id.startsWith('activity:')
       && (!isHotelScenario(expense, trip.id) || expense.id === hotelExpenseId))
-      .map((expense) => ({ ...expense, amount: resolveCurrentAmount(expense, travelers, tripDays, nights) }));
+      .map((expense) => ({ ...expense, amount: resolveBudgetExpenseAmount(expense, travelers, tripDays, nights) }));
     const hasCategoryScenario = (categoryId) => {
       const category = FIXED_CATEGORIES.find((item) => item.id === categoryId);
       return byId.has(categoryExpenseId(category, trip.id, lodging))
@@ -134,6 +159,8 @@ export default function TripGlobalBudget({ trip, token, userId, lodging, selecte
     return { ...calculateGlobalBudget({ total: trip.budget > 0 ? trip.budget : null, currency: baseCurrency, entries }),
       travelers, savedFlightCount: flightEntries.length, scenarioExpenses: expenses };
   }, [baseCurrency, expenses, flights, hotelExpenseId, itineraryDays, lodging, nights, selectedFlight, travelers, trip.budget, trip.id, tripDays]);
+  const persistenceNotice = budgetPersistenceNotice({ enabled: packagePersistenceEnabled,
+    packageStatus: packagePersistenceStatus, packageDirty, scenarioReady: scenarioStorageStatus !== 'loading', saveStatus: packageSaveStatus });
 
   useEffect(() => { onScenarioChange?.(calculation); }, [calculation, onScenarioChange]);
 
@@ -157,7 +184,11 @@ export default function TripGlobalBudget({ trip, token, userId, lodging, selecte
 
   return <section className="trip-global-budget" aria-label="Presupuesto global del viaje">
     <div className="activity-budget__title"><h3>Presupuesto de mi viaje</h3></div>
-    <p>Escenario local en {calculation.currency}. Los precios faltantes se mantienen como pendientes; una estimación no equivale a una tarifa confirmada.</p>
+    <p>Escenario en {calculation.currency}. Los precios faltantes se mantienen como pendientes; una estimación no equivale a una tarifa confirmada.</p>
+    <p className={`activity-budget__scope${['error', 'conflict'].includes(persistenceNotice.state) ? ' activity-budget__alert' : ''}`}
+      data-persistence-state={persistenceNotice.state} role={persistenceNotice.role} aria-live="polite">
+      {persistenceNotice.message} Seleccionar un vuelo o alojamiento no realiza una reserva.
+    </p>
     <label className="budget-travelers">Viajeros incluidos
       <input type="number" min="1" max="20" step="1" value={travelers}
         onChange={(event) => setScenarioTravelers(Math.min(20, Math.max(1, Number(event.target.value) || 1)))} />
@@ -195,7 +226,7 @@ export default function TripGlobalBudget({ trip, token, userId, lodging, selecte
         const catalogAmountUnverified = activity.costo != null && Number.isFinite(Number(activity.costo));
         const known = catalogAmountUnverified && Boolean(activity.moneda && /^[A-Z]{3}$/.test(activity.moneda))
           && ['VERIFIED_QUOTE', 'CONFIRMED'].includes(activity.costoEstado);
-        const costSummary = existing ? `${existing.confidence === 'UNKNOWN' ? 'Pendiente de estimación' : money(resolveCurrentAmount(existing, travelers, 1, 0), existing.currency)} · ${CONFIDENCE_LABELS[existing.confidence] || 'Estimación'}`
+        const costSummary = existing ? `${existing.confidence === 'UNKNOWN' ? 'Pendiente de estimación' : money(resolveBudgetExpenseAmount(existing, travelers, 1, 0), existing.currency)} · ${CONFIDENCE_LABELS[existing.confidence] || 'Estimación'}`
           : known ? `${money(activity.costo, activity.moneda)} · precio registrado con moneda`
             : catalogAmountUnverified ? 'Importe en catálogo sin moneda verificable'
               : 'Precio desconocido';
@@ -226,17 +257,17 @@ export default function TripGlobalBudget({ trip, token, userId, lodging, selecte
         {entry.source && ` · Fuente: ${entry.source}`}{entry.queriedAt && ` · Consultado: ${new Date(entry.queriedAt).toLocaleDateString('es-CO')}`}</li>)}</ul>
     </details>}
     {scenarioStorageStatus === 'corrupt' && <p role="alert" className="activity-budget__alert">El escenario local está dañado y se conservó sin sobrescribir. <button type="button" onClick={resetCorruptScenario}>Reiniciar solo este escenario</button></p>}
-    {scenarioStorageStatus === 'unavailable' && <p role="status" className="activity-budget__unknown">No se pudo guardar localmente o falta identificar al usuario; los cambios no persistirán al cerrar la sesión.</p>}
-    <p className="activity-budget__scope">{packagePersistenceEnabled
-      ? 'Las estimaciones se conservan localmente y se incluyen en el paquete al pulsar «Guardar itinerario». Solo quedan confirmadas en el servidor después de PUT y GET satisfactorios.'
-      : 'Este escenario se guarda localmente por usuario y viaje; la persistencia integral está desactivada y no se sincroniza con Oracle.'} Seleccionar un vuelo o alojamiento no realiza una reserva.</p>
+    {scenarioStorageStatus === 'identity-missing' && <p role="status" className="activity-budget__unknown">La sesión no entregó un identificador de usuario. Se conserva el escenario en esta vista, pero no se puede aislar ni recuperar localmente hasta restablecer la identidad.</p>}
+    {scenarioStorageStatus === 'trip-identity-missing' && <p role="status" className="activity-budget__unknown">No se puede identificar este viaje para guardar su escenario local.</p>}
+    {scenarioStorageStatus === 'storage-unavailable' && <p role="status" className="activity-budget__unknown">El navegador no permitió acceder al almacenamiento local. Los cambios actuales siguen en pantalla; evita recargar o cerrar esta pestaña hasta guardarlos en el paquete.</p>}
+    {scenarioStorageStatus === 'write-failed' && <p role="status" className="activity-budget__unknown">Falló la escritura del escenario local. Los cambios siguen en pantalla; evita recargar o cerrar esta pestaña hasta guardarlos en el paquete.</p>}
   </section>;
 }
 
 function BudgetCategoryCard({ category, expenseId, existing, legacyEntries, travelers, days, nights, lodgingName, baseCurrency, onSave, onRemove }) {
   const [amount, setAmount] = useState(existing?.unitAmount == null ? (existing?.amount == null ? '' : String(existing.amount)) : String(existing.unitAmount));
   const [currency, setCurrency] = useState(existing?.currency || baseCurrency);
-  const [confidence, setConfidence] = useState(existing?.confidence || 'MANUAL_ESTIMATE');
+  const [confidence, setConfidence] = useState(budgetEditorConfidence(existing?.confidence));
   const [perPerson, setPerPerson] = useState(existing?.pricingMode === 'per_person');
   const [nightly, setNightly] = useState(existing?.pricingMode === 'per_night' || (!existing && category.id === 'hotel'));
   const [rooms, setRooms] = useState(Math.max(1, Number(existing?.rooms) || 1));
@@ -245,7 +276,7 @@ function BudgetCategoryCard({ category, expenseId, existing, legacyEntries, trav
   useEffect(() => {
     setAmount(existing?.unitAmount == null ? (existing?.amount == null ? '' : String(existing.amount)) : String(existing.unitAmount));
     setCurrency(existing?.currency || baseCurrency);
-    setConfidence(existing?.confidence || 'MANUAL_ESTIMATE');
+    setConfidence(budgetEditorConfidence(existing?.confidence));
     setRate(existing?.rateToBudget && existing.currency !== 'COP' ? String(existing.rateToBudget) : '');
     setRateEvidence(existing?.rateSource ? { provider: existing.rateSource, date: existing.rateDate } : null);
     setPerPerson(existing?.pricingMode === 'per_person');
@@ -272,7 +303,7 @@ function BudgetCategoryCard({ category, expenseId, existing, legacyEntries, trav
   return <article className="budget-category-card">
     <header><h4>{category.title}</h4><p>{category.hint}</p></header>
     {category.id === 'hotel' && lodgingName && <p className="budget-category-card__hotel">Alojamiento seleccionado: <strong>{lodgingName}</strong></p>}
-    {existing ? <p className="budget-category-card__current">{existing.confidence === 'UNKNOWN' ? 'Pendiente de estimación' : `${money(resolveCurrentAmount(existing, travelers, days, nights), existing.currency)} · ${CONFIDENCE_LABELS[existing.confidence]}`}</p>
+    {existing ? <p className="budget-category-card__current">{existing.confidence === 'UNKNOWN' ? 'Pendiente de estimación' : `${money(resolveBudgetExpenseAmount(existing, travelers, days, nights), existing.currency)} · ${CONFIDENCE_LABELS[existing.confidence]}`}</p>
       : <p className="budget-category-card__current">{category.id === 'hotel' ? 'Tarifa no disponible · pendiente de estimación' : 'Pendiente de estimación'}</p>}
     {legacyEntries?.length > 0 && <p className="budget-category-card__current">Ya hay {legacyEntries.length} partida(s) anterior(es) de este rubro incluidas abajo; revísalas para evitar doble conteo.</p>}
     {category.id === 'hotel' && <p>Viaje: {nights} noche(s) calculadas · {travelers} viajero(s)</p>}
@@ -325,7 +356,7 @@ function ActivityCostEditor({ activity, existing, known, catalogAmountUnverified
       rateDate: currency === baseCurrency ? null : (rateEvidence?.date || null),
       queriedAt: new Date().toISOString(), availability: confidence === 'VERIFIED_FREE' ? 'not_provided' : 'unknown' });
   };
-  return <article className="budget-activity-row"><div><strong>{activity.nombre || 'Actividad'}</strong><p>{existing ? 'Escenario local: ' : known ? 'Importe con moneda conocida: ' : catalogAmountUnverified ? `El catálogo guarda ${activity.costo}, pero no conserva moneda o fuente verificable; no se suma automáticamente. ` : 'Costo desconocido. No se presume gratuito.'}{existing ? `${existing.confidence === 'UNKNOWN' ? 'Pendiente de estimación' : money(resolveCurrentAmount(existing, travelers, 1, 0), existing.currency)} · ${CONFIDENCE_LABELS[existing.confidence]}` : known ? money(activity.costo, activity.moneda) : ''}</p></div>
+  return <article className="budget-activity-row"><div><strong>{activity.nombre || 'Actividad'}</strong><p>{existing ? 'Escenario local: ' : known ? 'Importe con moneda conocida: ' : catalogAmountUnverified ? `El catálogo guarda ${activity.costo}, pero no conserva moneda o fuente verificable; no se suma automáticamente. ` : 'Costo desconocido. No se presume gratuito.'}{existing ? `${existing.confidence === 'UNKNOWN' ? 'Pendiente de estimación' : money(resolveBudgetExpenseAmount(existing, travelers, 1, 0), existing.currency)} · ${CONFIDENCE_LABELS[existing.confidence]}` : known ? money(activity.costo, activity.moneda) : ''}</p></div>
     <form onSubmit={submit}>
       <label>Costo por persona<input type="number" min="0" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Costo desconocido" /></label>
       <label>Moneda (código ISO)<input required pattern="[A-Za-z]{3}" maxLength="3" value={currency} onChange={(event) => { setCurrency(event.target.value.toUpperCase()); setRateEvidence(null); }} aria-label={`Moneda para ${activity.nombre || 'actividad'}`} /></label>
@@ -413,15 +444,6 @@ function categoryExpenseId(category, tripId, lodging) {
 }
 function isHotelScenario(expense, tripId) {
   return expense.id === `hotel:${tripId}` || expense.id.startsWith(`hotel:${tripId}:`) || expense.category === 'Alojamiento';
-}
-function resolveCurrentAmount(expense, travelers, days, nights) {
-  if (expense?.confidence === 'UNKNOWN') return null;
-  const unit = Number(expense.unitAmount ?? expense.amount);
-  if (!Number.isFinite(unit) || unit < 0) return expense.amount;
-  if (expense.pricingMode === 'per_person') return unit * travelers;
-  if (expense.pricingMode === 'daily_person') return unit * travelers * days;
-  if (expense.pricingMode === 'per_night') return unit * nights * Math.max(1, Number(expense.rooms) || 1);
-  return unit;
 }
 function money(amount, currency = 'COP') {
   try { return new Intl.NumberFormat('es-CO', { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount) || 0); }

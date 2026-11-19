@@ -1,7 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateGlobalBudget, hotelBudgetExpenseId } from './globalBudget.js';
+import { budgetEditorConfidence, calculateGlobalBudget, hotelBudgetExpenseId, mergeBudgetExpenses } from './globalBudget.js';
 import { buildItineraryPdf, buildItineraryPrintHtml } from './itineraryPrint.js';
+
+test('editing an unknown budget row as a manual estimate is explicit and keeps server-only expenses', () => {
+  assert.equal(budgetEditorConfidence('UNKNOWN'), 'MANUAL_ESTIMATE');
+  assert.equal(budgetEditorConfidence('CONFIRMED'), 'CONFIRMED');
+  const merged = mergeBudgetExpenses(
+    [{ id: 'food:1', confidence: 'MANUAL_ESTIMATE', amount: 120000 }],
+    [{ id: 'food:1', confidence: 'UNKNOWN', amount: null }, { id: 'transport:1', confidence: 'UNKNOWN', amount: null }],
+  );
+  assert.deepEqual(merged, [
+    { id: 'food:1', confidence: 'MANUAL_ESTIMATE', amount: 120000 },
+    { id: 'transport:1', confidence: 'UNKNOWN', amount: null },
+  ]);
+});
 
 test('global budget deduplicates stable IDs and separates unknown, sandbox, estimate, confirmed and currency conversion', () => {
   const result = calculateGlobalBudget({ total: 9_000_000, currency: 'COP', entries: [
