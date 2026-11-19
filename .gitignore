@@ -39,3 +39,25 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Local environment files and Oracle Wallet material
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+**/WALLET_BD/
+**/Wallet/
+**/wallet/
+**/Wallet_*.zip
+**/wallet_*.zip
+**/cwallet.sso
+**/ewallet.p12
+**/*.jks
+**/*.keystore
+**/*.p12
+**/*.pfx
+# Temporary deployment exports of the Oracle Wallet (never commit)
+**/oracle-wallet*.zip
+**/oracle-wallet*.zip.b64

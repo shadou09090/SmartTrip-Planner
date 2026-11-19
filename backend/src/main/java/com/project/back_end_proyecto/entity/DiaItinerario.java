@@ -1,32 +1,66 @@
 package com.project.back_end_proyecto.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Objects;
 
 @Entity
-@Table(name = "dias_itinerario")
+@Table(
+        name = "DIA_ITINERARIO",
+        uniqueConstraints = @UniqueConstraint(
+                name = "UK_DIA_ITINERARIO",
+                columnNames = {"ID_ITINERARIO", "FECHA"}
+        )
+)
 public class DiaItinerario {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ID_DIA", nullable = false)
     private Long id;
 
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "ID_ITINERARIO",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "FK_DIA_ITINERARIO")
+    )
+    private Itinerario itinerario;
+
+    @NotNull
+    @Column(name = "FECHA", nullable = false)
     private LocalDate fecha;
 
-    @ElementCollection
-    @CollectionTable(name = "actividades_dia", joinColumns = @JoinColumn(name = "dia_id"))
-    @Column(name = "actividad")
-    private List<String> actividades = new ArrayList<>();
-
-    public DiaItinerario() {}
-
-    public DiaItinerario(LocalDate fecha) {
-        this.fecha = fecha;
+    protected DiaItinerario() {
     }
 
-    public Long getId() { return id; }
-    public LocalDate getFecha() { return fecha; }
-    public List<String> getActividades() { return actividades; }
-    public void agregarActividad(String actividad) { this.actividades.add(actividad); }
+    public DiaItinerario(Itinerario itinerario, LocalDate fecha) {
+        this.itinerario = Objects.requireNonNull(itinerario, "itinerario es obligatorio");
+        this.fecha = Objects.requireNonNull(fecha, "fecha es obligatoria");
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Itinerario getItinerario() {
+        return itinerario;
+    }
+
+    public LocalDate getFecha() {
+        return fecha;
+    }
 }
