@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class ExternalActivityRecommendationService {
     private static final Logger log = LoggerFactory.getLogger(ExternalActivityRecommendationService.class);
     private static final Duration CACHE_TTL = Duration.ofHours(6);
@@ -37,7 +37,7 @@ public class ExternalActivityRecommendationService {
 
     @Autowired
     public ExternalActivityRecommendationService(FuenteLugaresPublicos source, WikimediaCommonsPhotoService photos,
-                                                 @Value("${smarttrip.recommendations.diagnostics:false}") boolean diagnosticsEnabled) {
+            @Value("${smarttrip.recommendations.diagnostics:false}") boolean diagnosticsEnabled) {
         this.source = source;
         this.photos = photos;
         this.diagnosticsEnabled = diagnosticsEnabled;
@@ -48,20 +48,24 @@ public class ExternalActivityRecommendationService {
     }
 
     public Result recommend(Long tripId, String destination, LocalDate startDate, LocalDate endDate,
-                            List<String> interests) {
+            List<String> interests) {
         List<String> requestedInterests = interests == null ? List.of() : interests;
         try {
             FuenteLugaresPublicos.ResultadoLugares discovery = source.buscarConDiagnostico(destination);
-            // Mockito and third-party legacy implementations may return null for this default method.
-            if (discovery == null) discovery = new FuenteLugaresPublicos.ResultadoLugares(source.buscar(destination), List.of());
+            // Mockito and third-party legacy implementations may return null for this
+            // default method.
+            if (discovery == null)
+                discovery = new FuenteLugaresPublicos.ResultadoLugares(source.buscar(destination), List.of());
             List<LugarPublico> places = discovery.lugares();
             List<String> sourceWarnings = new ArrayList<>(discovery.avisos());
             RelevanceScorer.RankingResult ranking = RelevanceScorer.rankTourismDetailed(places, requestedInterests);
             List<RelevanceScorer.RankedPlace> ranked = ranking.ranked();
             List<LugarPublico> photoCandidates = ranked.stream().limit(PHOTO_LOOKUP_LIMIT)
                     .map(RelevanceScorer.RankedPlace::place).toList();
-            Map<String, WikimediaCommonsPhotoService.VerifiedPhoto> verifiedPhotos = photos.verifyPlaceImages(photoCandidates);
-            if (verifiedPhotos == null) verifiedPhotos = Map.of();
+            Map<String, WikimediaCommonsPhotoService.VerifiedPhoto> verifiedPhotos = photos
+                    .verifyPlaceImages(photoCandidates);
+            if (verifiedPhotos == null)
+                verifiedPhotos = Map.of();
             List<RecomendacionExterna> recommendations = new ArrayList<>();
             for (var item : ranked.stream().limit(RECOMMENDATION_LIMIT).toList()) {
                 LugarPublico place = item.place();
@@ -92,11 +96,14 @@ public class ExternalActivityRecommendationService {
                         && validCoordinate(place.longitud(), -180, 180);
                 boolean localScope = "LOCAL_ATTRACTION".equals(scope) || "CITY".equals(scope);
                 String exclusionReason = null;
-                if (!coordinatesValid) exclusionReason = "No hay coordenadas geográficas válidas para planificar este lugar.";
-                else if (importance.equals("EXPLORABLE")) exclusionReason = "La categoría y los metadatos disponibles no aportan suficiente evidencia turística para incluirlo automáticamente.";
-                else if (!localScope) exclusionReason = scope.isBlank()
-                        ? "El alcance geográfico no está confirmado; verifica la ubicación antes de planificarlo."
-                        : "El proveedor lo clasifica como regional o excursión; verifica el traslado antes de incluirlo.";
+                if (!coordinatesValid)
+                    exclusionReason = "No hay coordenadas geográficas válidas para planificar este lugar.";
+                else if (importance.equals("EXPLORABLE"))
+                    exclusionReason = "La categoría y los metadatos disponibles no aportan suficiente evidencia turística para incluirlo automáticamente.";
+                else if (!localScope)
+                    exclusionReason = scope.isBlank()
+                            ? "El alcance geográfico no está confirmado; verifica la ubicación antes de planificarlo."
+                            : "El proveedor lo clasifica como regional o excursión; verifica el traslado antes de incluirlo.";
                 boolean itineraryEligible = coordinatesValid && !importance.equals("EXPLORABLE") && localScope;
                 recommendations.add(new RecomendacionExterna(place.id(), place.nombre(), place.descripcion(),
                         place.categoria(), place.ubicacion(), place.latitud(), place.longitud(), null, null,
@@ -107,8 +114,10 @@ public class ExternalActivityRecommendationService {
                         provider, scope, distance, tourismSignal, normalizedCategory, importance,
                         RelevanceScorer.tourismEvidence(place), itineraryEligible, exclusionReason));
                 if (diagnosticsEnabled && recommendations.size() <= 12) {
-                    log.info("tourism_candidate destination={} id={} name={} category={} coordinates={},{} city={} district={} boundary={} scope={} scopeReason={} relevance={} importance={} eligible={} exclusion={}",
-                            safeLog(destination), safeLog(place.id()), safeLog(place.nombre()), safeLog(normalizedCategory),
+                    log.info(
+                            "tourism_candidate destination={} id={} name={} category={} coordinates={},{} city={} district={} boundary={} scope={} scopeReason={} relevance={} importance={} eligible={} exclusion={}",
+                            safeLog(destination), safeLog(place.id()), safeLog(place.nombre()),
+                            safeLog(normalizedCategory),
                             place.latitud(), place.longitud(), safeLog(tag(place, "city")),
                             safeLog(tag(place, "district")), safeLog(tag(place, "boundary_context")), safeLog(scope),
                             safeLog(tag(place, "scope_reason")), tourismSignal, importance, itineraryEligible,
@@ -118,20 +127,25 @@ public class ExternalActivityRecommendationService {
                         item.matchedInterests(), requestedInterests, Instant.now().plus(CACHE_TTL)));
             }
             selections.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(Instant.now()));
-            if (selections.size() > 1000) selections.clear();
+            if (selections.size() > 1000)
+                selections.clear();
             List<String> warnings = recommendations.isEmpty() && !places.isEmpty()
-                    ? append(sourceWarnings, "Los proveedores respondieron, pero no devolvieron atractivos turísticos aptos; se omitieron alojamientos y negocios no turísticos.")
+                    ? append(sourceWarnings,
+                            "Los proveedores respondieron, pero no devolvieron atractivos turísticos aptos; se omitieron alojamientos y negocios no turísticos.")
                     : List.copyOf(sourceWarnings);
             RecomendacionDiagnostico diagnostics = diagnosticsEnabled
-                    ? diagnostics(destination, discovery, ranking, recommendations, warnings) : null;
+                    ? diagnostics(destination, discovery, ranking, recommendations, warnings)
+                    : null;
             if (diagnosticsEnabled) {
                 Map<String, Integer> classifications = classificationCounts(recommendations);
                 Map<String, Integer> exclusionReasons = exclusionReasons(recommendations);
-                log.info("tourism_candidates destination={} received={} withCoordinates={} principal={} complementary={} explorable={} eligible={} regionalOrOptional={} excluded={} reasons={}",
+                log.info(
+                        "tourism_candidates destination={} received={} withCoordinates={} principal={} complementary={} explorable={} eligible={} regionalOrOptional={} excluded={} reasons={}",
                         safeLog(destination), recommendations.size(), classifications.get("conCoordenadasValidas"),
                         classifications.get("principales"), classifications.get("complementarios"),
                         classifications.get("explorables"), classifications.get("aptosParaItinerario"),
-                        classifications.get("regionalesUOpcionales"), classifications.get("noElegibles"), exclusionReasons);
+                        classifications.get("regionalesUOpcionales"), classifications.get("noElegibles"),
+                        exclusionReasons);
             }
             return new Result(List.copyOf(recommendations), warnings, diagnostics);
         } catch (ErrorFuentePublica unavailable) {
@@ -139,11 +153,13 @@ public class ExternalActivityRecommendationService {
             List<String> diagnosticErrors = unavailable.avisos().isEmpty() ? errors : unavailable.avisos();
             return new Result(List.of(), errors, diagnosticsEnabled
                     ? new RecomendacionDiagnostico(destination, null, null, unavailable.fuentesConsultadas(),
-                    zeroCounts(unavailable.fuentesConsultadas()), Map.of(), 0, diagnosticErrors) : null);
+                            zeroCounts(unavailable.fuentesConsultadas()), Map.of(), 0, diagnosticErrors)
+                    : null);
         } catch (RuntimeException unavailable) {
             List<String> errors = List.of("No fue posible consultar los lugares públicos por el momento.");
             return new Result(List.of(), errors, diagnosticsEnabled
-                    ? new RecomendacionDiagnostico(destination, null, null, List.of(), Map.of(), Map.of(), 0, errors) : null);
+                    ? new RecomendacionDiagnostico(destination, null, null, List.of(), Map.of(), Map.of(), 0, errors)
+                    : null);
         }
     }
 
@@ -161,32 +177,43 @@ public class ExternalActivityRecommendationService {
     }
 
     public record Result(List<RecomendacionExterna> recommendations, List<String> warnings,
-                         RecomendacionDiagnostico diagnostics) {
+            RecomendacionDiagnostico diagnostics) {
         public Result(List<RecomendacionExterna> recommendations, List<String> warnings) {
             this(recommendations, warnings, null);
         }
     }
-    public record Selection(LugarPublico place, List<String> matchedInterests) { }
-    private record SelectionKey(Long tripId, String externalId) { }
+
+    public record Selection(LugarPublico place, List<String> matchedInterests) {
+    }
+
+    private record SelectionKey(Long tripId, String externalId) {
+    }
+
     private record CachedSelection(LugarPublico place, String destination, List<String> matchedInterests,
-                                   List<String> requestedInterests, Instant expiresAt) { }
+            List<String> requestedInterests, Instant expiresAt) {
+    }
 
     private static String tag(LugarPublico place, String key) {
         return place.etiquetas() == null ? "" : place.etiquetas().getOrDefault(key, "");
     }
 
     private static String safeLog(String value) {
-        return value == null ? "" : value.replaceAll("[\\r\\n\\t]", " ").substring(0,
-                Math.min(value.replaceAll("[\\r\\n\\t]", " ").length(), 160));
+        return value == null ? ""
+                : value.replaceAll("[\\r\\n\\t]", " ").substring(0,
+                        Math.min(value.replaceAll("[\\r\\n\\t]", " ").length(), 160));
     }
 
     private static java.math.BigDecimal decimalTag(LugarPublico place, String key) {
-        try { return new java.math.BigDecimal(tag(place, key)); }
-        catch (NumberFormatException ignored) { return null; }
+        try {
+            return new java.math.BigDecimal(tag(place, key));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     private static boolean validCoordinate(java.math.BigDecimal value, double minimum, double maximum) {
-        if (value == null) return false;
+        if (value == null)
+            return false;
         double number = value.doubleValue();
         return Double.isFinite(number) && number >= minimum && number <= maximum;
     }
@@ -198,23 +225,28 @@ public class ExternalActivityRecommendationService {
     }
 
     private static Map<String, Integer> zeroCounts(List<String> sources) {
-        if (sources == null || sources.isEmpty()) return Map.of();
+        if (sources == null || sources.isEmpty())
+            return Map.of();
         java.util.LinkedHashMap<String, Integer> counts = new java.util.LinkedHashMap<>();
         sources.forEach(source -> counts.put(source, 0));
         return Map.copyOf(counts);
     }
 
     private RecomendacionDiagnostico diagnostics(String destination, FuenteLugaresPublicos.ResultadoLugares discovery,
-                                                  RelevanceScorer.RankingResult ranking,
-                                                  List<RecomendacionExterna> recommendations,
-                                                  List<String> warnings) {
+            RelevanceScorer.RankingResult ranking,
+            List<RecomendacionExterna> recommendations,
+            List<String> warnings) {
         java.math.BigDecimal latitude = null;
         java.math.BigDecimal longitude = null;
         try {
             var center = source.geocodificarDestino(destination).orElse(null);
-            if (center != null) { latitude = center.latitud(); longitude = center.longitud(); }
+            if (center != null) {
+                latitude = center.latitud();
+                longitude = center.longitud();
+            }
         } catch (RuntimeException ignored) {
-            // Diagnostics must not turn an otherwise usable partial result into a failed search.
+            // Diagnostics must not turn an otherwise usable partial result into a failed
+            // search.
         }
         Map<String, Integer> classifications = classificationCounts(recommendations);
         Map<String, Integer> exclusionReasons = exclusionReasons(recommendations);
@@ -223,7 +255,8 @@ public class ExternalActivityRecommendationService {
                 Map.of("noTuristicosOAlojamiento", ranking.excludedByType(),
                         "duplicadosEliminados", ranking.duplicatesRemoved()),
                 recommendations.size(), warnings, discovery.areaGeografica() == null
-                ? source.areaGeograficaConsultada(destination) : discovery.areaGeografica(),
+                        ? source.areaGeograficaConsultada(destination)
+                        : discovery.areaGeografica(),
                 classifications, exclusionReasons);
     }
 
@@ -240,7 +273,8 @@ public class ExternalActivityRecommendationService {
         for (RecomendacionExterna place : recommendations) {
             boolean coordinates = validCoordinate(place.latitud(), -90, 90)
                     && validCoordinate(place.longitud(), -180, 180);
-            if (coordinates) counts.merge("conCoordenadasValidas", 1, Integer::sum);
+            if (coordinates)
+                counts.merge("conCoordenadasValidas", 1, Integer::sum);
             switch (place.clasificacionTuristica() == null ? "EXPLORABLE" : place.clasificacionTuristica()) {
                 case "PRINCIPAL" -> counts.merge("principales", 1, Integer::sum);
                 case "COMPLEMENTARIO" -> counts.merge("complementarios", 1, Integer::sum);
@@ -250,8 +284,10 @@ public class ExternalActivityRecommendationService {
                     || "EXCURSION_OPTIONAL".equals(place.alcance())) {
                 counts.merge("regionalesUOpcionales", 1, Integer::sum);
             }
-            if (place.elegibleItinerario()) counts.merge("aptosParaItinerario", 1, Integer::sum);
-            else counts.merge("noElegibles", 1, Integer::sum);
+            if (place.elegibleItinerario())
+                counts.merge("aptosParaItinerario", 1, Integer::sum);
+            else
+                counts.merge("noElegibles", 1, Integer::sum);
         }
         return Map.copyOf(counts);
     }
@@ -267,7 +303,8 @@ public class ExternalActivityRecommendationService {
     }
 
     private static java.util.Set<String> normalizeInterests(List<String> interests) {
-        if (interests == null) return java.util.Set.of();
+        if (interests == null)
+            return java.util.Set.of();
         return interests.stream().map(RelevanceScorer::normalize).filter(value -> !value.isBlank())
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }

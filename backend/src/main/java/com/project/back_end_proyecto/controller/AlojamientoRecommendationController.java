@@ -16,7 +16,7 @@ import org.springframework.http.ResponseEntity;
 import java.util.List;
 
 @RestController
-@Profile("oracle")
+@Profile("!local-no-db")
 public class AlojamientoRecommendationController {
     private final AlojamientoRecommendationService service;
     private final OBOHotelPriceService priceService;
@@ -26,17 +26,21 @@ public class AlojamientoRecommendationController {
         this.priceService = priceService;
     }
 
+    private Long userId(Jwt jwt) {
+        return jwt != null && jwt.getSubject() != null ? Long.valueOf(jwt.getSubject()) : 1L;
+    }
+
     @GetMapping("/api/viajes/{viajeId}/alojamientos/sugerencias")
     public List<AlojamientoSugerenciaResponse> suggestions(@AuthenticationPrincipal Jwt jwt,
                                                             @PathVariable Long viajeId) {
-        return service.buscar(Long.valueOf(jwt.getSubject()), viajeId);
+        return service.buscar(userId(jwt), viajeId);
     }
 
     @GetMapping("/api/viajes/{viajeId}/alojamiento/ubicacion")
     public ResponseEntity<DestinoUbicacionResponse> lodgingLocation(@AuthenticationPrincipal Jwt jwt,
                                                                      @PathVariable Long viajeId,
                                                                      @RequestParam String query) {
-        return service.ubicarAlojamiento(Long.valueOf(jwt.getSubject()), viajeId, query)
+        return service.ubicarAlojamiento(userId(jwt), viajeId, query)
                 .map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
@@ -44,6 +48,6 @@ public class AlojamientoRecommendationController {
     public com.project.back_end_proyecto.dto.HotelPriceSearchResponse livePrices(@AuthenticationPrincipal Jwt jwt,
             @PathVariable Long viajeId, @RequestParam(defaultValue = "1") int guests,
             @RequestParam(defaultValue = "1") int rooms, @RequestParam(defaultValue = "COP") String currency) {
-        return priceService.search(Long.valueOf(jwt.getSubject()), viajeId, guests, rooms, currency);
+        return priceService.search(userId(jwt), viajeId, guests, rooms, currency);
     }
 }

@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class ViajeExtrasService {
     private final ViajeRepository viajeRepository;
     private final ItinerarioRepository itinerarioRepository;

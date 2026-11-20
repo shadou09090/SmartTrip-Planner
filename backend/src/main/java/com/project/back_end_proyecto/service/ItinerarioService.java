@@ -26,6 +26,7 @@ import com.project.back_end_proyecto.repository.ItinerarioRepository;
 import com.project.back_end_proyecto.repository.ViajeInteresRepository;
 import com.project.back_end_proyecto.repository.ViajeRepository;
 import com.project.back_end_proyecto.service.publicplaces.RelevanceScorer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +65,7 @@ public class ItinerarioService {
         this(null, null, null, null, null, null, null, null, null, null, null);
     }
 
+    @Autowired
     public ItinerarioService(ItinerarioRepository itinerarioRepository,
                              DiaItinerarioRepository diaRepository,
                              ViajeRepository viajeRepository,

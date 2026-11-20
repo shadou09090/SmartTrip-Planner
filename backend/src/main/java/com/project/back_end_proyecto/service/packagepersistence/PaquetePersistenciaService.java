@@ -27,7 +27,7 @@ import java.util.HexFormat;
 import java.util.Set;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 @ConditionalOnProperty(name = "smarttrip.package-persistence.enabled", havingValue = "true")
 public class PaquetePersistenciaService {
     private static final String REQUEST_KEY_PATTERN = "[A-Za-z0-9._:-]{8,80}";
@@ -37,7 +37,7 @@ public class PaquetePersistenciaService {
     private final Validator validator;
 
     public PaquetePersistenciaService(PaqueteSnapshotRepository repository, PaqueteTripAccess access,
-                                     ObjectMapper mapper, Validator validator) {
+            ObjectMapper mapper, Validator validator) {
         this.repository = repository;
         this.access = access;
         this.validator = validator;
@@ -47,13 +47,15 @@ public class PaquetePersistenciaService {
 
     @Transactional
     public PaqueteGuardarResponse guardar(long userId, long tripId, String idempotencyKey,
-                                         PaqueteGuardarRequest request) {
+            PaqueteGuardarRequest request) {
         if (idempotencyKey == null || !idempotencyKey.matches(REQUEST_KEY_PATTERN)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se requiere Idempotency-Key válido.");
         }
         var trip = access.requireEdit(userId, tripId);
-        if (!repository.lockTrip(tripId)) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Viaje no encontrado.");
-        if (request == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Falta el contenido del paquete.");
+        if (!repository.lockTrip(tripId))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Viaje no encontrado.");
+        if (request == null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Falta el contenido del paquete.");
         var violations = validator.validate(request);
         if (!violations.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -84,9 +86,12 @@ public class PaquetePersistenciaService {
         LocalDateTime now = LocalDateTime.now();
         var response = new PaqueteGuardarResponse(tripId, nextRevision, idempotencyKey, now, true, request);
         String responseJson = json(response);
-        if (current.isPresent()) repository.updatePackage(tripId, nextRevision, requestJson, sha256(requestJson), now);
-        else repository.insertPackage(tripId, nextRevision, requestJson, sha256(requestJson), now);
-        // Same database transaction as the package row: a failed idempotency insert rolls back the save.
+        if (current.isPresent())
+            repository.updatePackage(tripId, nextRevision, requestJson, sha256(requestJson), now);
+        else
+            repository.insertPackage(tripId, nextRevision, requestJson, sha256(requestJson), now);
+        // Same database transaction as the package row: a failed idempotency insert
+        // rolls back the save.
         repository.insertRequest(tripId, idempotencyKey, requestHash, nextRevision, responseJson, now);
         return response;
     }
@@ -101,7 +106,7 @@ public class PaquetePersistenciaService {
     }
 
     private void validateReferencesAndDates(long tripId, java.time.LocalDate start,
-                                            java.time.LocalDate end, PaqueteGuardarRequest request) {
+            java.time.LocalDate end, PaqueteGuardarRequest request) {
         if (request == null || request.dias() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El paquete no contiene días.");
         }
@@ -158,28 +163,37 @@ public class PaquetePersistenciaService {
     }
 
     private String json(Object value) {
-        try { return mapper.writeValueAsString(value); }
-        catch (JacksonException e) {
+        try {
+            return mapper.writeValueAsString(value);
+        } catch (JacksonException e) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "El paquete no se pudo serializar.");
         }
     }
 
     private PaqueteGuardarRequest readRequest(String value) {
-        try { return mapper.readValue(value, PaqueteGuardarRequest.class); }
-        catch (JacksonException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "El paquete persistido no se pudo leer.");
+        try {
+            return mapper.readValue(value, PaqueteGuardarRequest.class);
+        } catch (JacksonException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "El paquete persistido no se pudo leer.");
         }
     }
 
     private PaqueteGuardarResponse readResponse(String value) {
-        try { return mapper.readValue(value, PaqueteGuardarResponse.class); }
-        catch (JacksonException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "La respuesta idempotente no se pudo recuperar.");
+        try {
+            return mapper.readValue(value, PaqueteGuardarResponse.class);
+        } catch (JacksonException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "La respuesta idempotente no se pudo recuperar.");
         }
     }
 
     private static String sha256(String value) {
-        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
-        catch (NoSuchAlgorithmException impossible) { throw new IllegalStateException("SHA-256 no está disponible.", impossible); }
+        try {
+            return HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 no está disponible.", impossible);
+        }
     }
 }

@@ -13,10 +13,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** Combines specialized public sources; lodging discovery remains separate from tourism discovery. */
+/**
+ * Combines specialized public sources; lodging discovery remains separate from
+ * tourism discovery.
+ */
 @Component
 @Primary
-@Profile("oracle")
+@Profile("!local-no-db")
 public class ResilientPublicPlacesSource implements FuenteLugaresPublicos {
     private static final Logger log = LoggerFactory.getLogger(ResilientPublicPlacesSource.class);
     private static final int RESULT_LIMIT = 100;
@@ -29,8 +32,8 @@ public class ResilientPublicPlacesSource implements FuenteLugaresPublicos {
 
     @Autowired
     public ResilientPublicPlacesSource(GeoapifyPlaceSource geoapify, OpenStreetMapPlaceSource openStreetMap,
-                                      WikidataTourismPlaceSource wikidata,
-                                      WikipediaGeosearchPlaceSource wikipedia) {
+            WikidataTourismPlaceSource wikidata,
+            WikipediaGeosearchPlaceSource wikipedia) {
         this.geoapify = geoapify;
         this.openStreetMap = openStreetMap;
         this.wikidata = wikidata;
@@ -43,7 +46,7 @@ public class ResilientPublicPlacesSource implements FuenteLugaresPublicos {
     }
 
     ResilientPublicPlacesSource(GeoapifyPlaceSource geoapify, OpenStreetMapPlaceSource openStreetMap,
-                                WikidataTourismPlaceSource wikidata) {
+            WikidataTourismPlaceSource wikidata) {
         this(geoapify, openStreetMap, wikidata, null);
     }
 
@@ -66,14 +69,16 @@ public class ResilientPublicPlacesSource implements FuenteLugaresPublicos {
     public Optional<CoordenadasPublicas> geocodificarDestino(String destino) {
         try {
             Optional<CoordenadasPublicas> resolved = geoapify.geocodificarDestino(destino);
-            if (resolved.isPresent()) return resolved;
+            if (resolved.isPresent())
+                return resolved;
             log.info("destination_geocode source=Geoapify result=no_match fallback=Nominatim");
         } catch (RuntimeException primaryFailure) {
             log.info("destination_geocode source=Geoapify result=unavailable fallback=Nominatim exceptionType={}",
                     primaryFailure.getClass().getSimpleName());
         }
-        try { return openStreetMap.geocodificarDestino(destino); }
-        catch (RuntimeException fallbackFailure) {
+        try {
+            return openStreetMap.geocodificarDestino(destino);
+        } catch (RuntimeException fallbackFailure) {
             log.info("destination_geocode source=Nominatim result=unavailable exceptionType={}",
                     fallbackFailure.getClass().getSimpleName());
             throw fallbackFailure;
@@ -110,16 +115,21 @@ public class ResilientPublicPlacesSource implements FuenteLugaresPublicos {
         }
 
         if (lodging) {
-            if (combined.size() >= RESULT_LIMIT) return diagnosticResult(combined.subList(0, RESULT_LIMIT), warnings, queriedSources, destination);
+            if (combined.size() >= RESULT_LIMIT)
+                return diagnosticResult(combined.subList(0, RESULT_LIMIT), warnings, queriedSources, destination);
             try {
                 queriedSources.add("OpenStreetMap");
                 return diagnosticResult(mergeUnique(combined, openStreetMap.buscarAlojamientos(destination)).stream()
                         .limit(RESULT_LIMIT).toList(), warnings, queriedSources, destination);
             } catch (RuntimeException failure) {
                 if (combined.isEmpty() && geoFailure != null) {
-                    throw new ErrorFuentePublica("Geoapify y OpenStreetMap no están disponibles para alojamientos; puedes reintentar.", failure);
+                    throw new ErrorFuentePublica(
+                            "Geoapify y OpenStreetMap no están disponibles para alojamientos; puedes reintentar.",
+                            failure);
                 }
-                if (combined.isEmpty()) throw new ErrorFuentePublica("OpenStreetMap no está disponible para alojamientos; puedes reintentar.", failure);
+                if (combined.isEmpty())
+                    throw new ErrorFuentePublica(
+                            "OpenStreetMap no está disponible para alojamientos; puedes reintentar.", failure);
                 warnings.add("OpenStreetMap no pudo complementar los alojamientos en esta búsqueda.");
                 log.info("OSM lodging source unavailable; retaining Geoapify results: exceptionType={}",
                         failure.getClass().getSimpleName());
@@ -138,9 +148,12 @@ public class ResilientPublicPlacesSource implements FuenteLugaresPublicos {
             }
         }
 
-        // A full Geoapify page is not necessarily a broad city itinerary candidate pool. Query
-        // Wikidata below 40 notable candidates so long trips can get distributed choices and
-        // city-wide landmark coverage, even when the center already supplied a few attractions.
+        // A full Geoapify page is not necessarily a broad city itinerary candidate
+        // pool. Query
+        // Wikidata below 40 notable candidates so long trips can get distributed
+        // choices and
+        // city-wide landmark coverage, even when the center already supplied a few
+        // attractions.
         if (wikidata != null && (RelevanceScorer.tourismCount(combined) < MINIMUM_CITY_COVERAGE_CANDIDATES
                 || !hasGeographicCoverage(combined))) {
             try {
@@ -153,8 +166,10 @@ public class ResilientPublicPlacesSource implements FuenteLugaresPublicos {
             }
         }
 
-        // Wikipedia geosearch is a separate editorial signal. It is queried when the map
-        // sources do not already give enough noteworthy, geographically distributed candidates;
+        // Wikipedia geosearch is a separate editorial signal. It is queried when the
+        // map
+        // sources do not already give enough noteworthy, geographically distributed
+        // candidates;
         // a WDQS outage therefore cannot veto the rest of the discovery pipeline.
         if (wikipedia != null && (RelevanceScorer.tourismCount(combined) < MINIMUM_CITY_COVERAGE_CANDIDATES
                 || !hasGeographicCoverage(combined))) {
@@ -168,24 +183,29 @@ public class ResilientPublicPlacesSource implements FuenteLugaresPublicos {
         }
 
         if (combined.isEmpty() && (geoFailure != null || osmFailure != null || wikidataFailure != null)) {
-            throw new ErrorFuentePublica("Los proveedores de lugares turísticos no están disponibles; puedes reintentar.",
+            throw new ErrorFuentePublica(
+                    "Los proveedores de lugares turísticos no están disponibles; puedes reintentar.",
                     wikidataFailure != null ? wikidataFailure : osmFailure != null ? osmFailure : geoFailure,
                     queriedSources, warnings);
         }
-        // Rank the combined candidate pool before applying the response cap. Previously, a
-        // full Geoapify page could consume the entire cap before notable OSM/Wikidata results
-        // were considered, even when the provider page covered only a few central blocks.
+        // Rank the combined candidate pool before applying the response cap.
+        // Previously, a
+        // full Geoapify page could consume the entire cap before notable OSM/Wikidata
+        // results
+        // were considered, even when the provider page covered only a few central
+        // blocks.
         List<LugarPublico> rankedAndDistributed = RelevanceScorer.rankTourism(combined, List.of()).stream()
                 .map(RelevanceScorer.RankedPlace::place).limit(RESULT_LIMIT).toList();
         return diagnosticResult(rankedAndDistributed, warnings, queriedSources, destination);
     }
 
     private ResultadoLugares diagnosticResult(List<LugarPublico> places, List<String> warnings,
-                                               List<String> queriedSources, String destination) {
+            List<String> queriedSources, String destination) {
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (LugarPublico place : places) {
             String provider = tag(place, "provider");
-            if (!provider.isBlank()) counts.merge(provider, 1, Integer::sum);
+            if (!provider.isBlank())
+                counts.merge(provider, 1, Integer::sum);
         }
         return new ResultadoLugares(places, warnings, queriedSources, counts,
                 geoapify.areaGeograficaConsultada(destination));
@@ -194,7 +214,8 @@ public class ResilientPublicPlacesSource implements FuenteLugaresPublicos {
     private static List<LugarPublico> mergeUnique(List<LugarPublico> first, List<LugarPublico> second) {
         List<LugarPublico> unique = new ArrayList<>(first);
         for (LugarPublico candidate : second) {
-            if (unique.stream().noneMatch(existing -> samePlace(existing, candidate))) unique.add(candidate);
+            if (unique.stream().noneMatch(existing -> samePlace(existing, candidate)))
+                unique.add(candidate);
         }
         return List.copyOf(unique);
     }
@@ -202,13 +223,18 @@ public class ResilientPublicPlacesSource implements FuenteLugaresPublicos {
     private static boolean samePlace(LugarPublico first, LugarPublico second) {
         String firstQid = tag(first, "wikidata");
         String secondQid = tag(second, "wikidata");
-        if (!firstQid.isBlank() && firstQid.equalsIgnoreCase(secondQid)) return true;
+        if (!firstQid.isBlank() && firstQid.equalsIgnoreCase(secondQid))
+            return true;
         String firstName = RelevanceScorer.normalize(first.nombre());
-        if (firstName.isBlank() || !firstName.equals(RelevanceScorer.normalize(second.nombre()))) return false;
+        if (firstName.isBlank() || !firstName.equals(RelevanceScorer.normalize(second.nombre())))
+            return false;
         String firstAddress = RelevanceScorer.normalize(first.ubicacion());
         String secondAddress = RelevanceScorer.normalize(second.ubicacion());
-        if (!firstAddress.isBlank() && firstAddress.equals(secondAddress)) return true;
-        if (first.latitud() == null || first.longitud() == null || second.latitud() == null || second.longitud() == null) return false;
+        if (!firstAddress.isBlank() && firstAddress.equals(secondAddress))
+            return true;
+        if (first.latitud() == null || first.longitud() == null || second.latitud() == null
+                || second.longitud() == null)
+            return false;
         double firstLat = Math.toRadians(first.latitud().doubleValue());
         double secondLat = Math.toRadians(second.latitud().doubleValue());
         double deltaLat = secondLat - firstLat;

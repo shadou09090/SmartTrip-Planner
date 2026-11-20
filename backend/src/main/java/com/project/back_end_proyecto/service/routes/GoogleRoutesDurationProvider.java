@@ -18,8 +18,10 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * Legacy, manually constructible Google adapter retained for compatibility with local work.
- * It is deliberately not a Spring component; the oracle profile uses OpenRouteServiceDurationProvider.
+ * Legacy, manually constructible Google adapter retained for compatibility with
+ * local work.
+ * It is deliberately not a Spring component; the oracle profile uses
+ * OpenRouteServiceDurationProvider.
  */
 @Deprecated
 public class GoogleRoutesDurationProvider implements RouteDurationProvider {
@@ -31,10 +33,9 @@ public class GoogleRoutesDurationProvider implements RouteDurationProvider {
     private final String apiKey;
 
     public GoogleRoutesDurationProvider(RestClient.Builder builder, String baseUrl, String apiKey) {
-        var httpClient = java.net.http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
-        var requestFactory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofSeconds(10));
-        this.client = builder.clone().baseUrl(baseUrl == null ? BASE_URL : baseUrl).requestFactory(requestFactory).build();
+        var requestFactory = com.project.back_end_proyecto.config.HttpRequestFactoryHelper.create(3000, 10000);
+        this.client = builder.clone().baseUrl(baseUrl == null ? BASE_URL : baseUrl).requestFactory(requestFactory)
+                .build();
         this.apiKey = apiKey == null ? "" : apiKey.trim();
     }
 
@@ -50,8 +51,11 @@ public class GoogleRoutesDurationProvider implements RouteDurationProvider {
                     "Cálculo de rutas Google sin configurar: define SMARTTRIP_GOOGLE_MAPS_API_KEY.");
         }
         Map<String, Object> payload = Map.of(
-                "origin", location(request.origin().latitude().doubleValue(), request.origin().longitude().doubleValue()),
-                "destination", location(request.destination().latitude().doubleValue(), request.destination().longitude().doubleValue()),
+                "origin",
+                location(request.origin().latitude().doubleValue(), request.origin().longitude().doubleValue()),
+                "destination",
+                location(request.destination().latitude().doubleValue(),
+                        request.destination().longitude().doubleValue()),
                 "travelMode", mode.name());
         try {
             JsonNode root = client.post().uri(ROUTE_PATH)
@@ -70,11 +74,13 @@ public class GoogleRoutesDurationProvider implements RouteDurationProvider {
             return new RouteCalculationResponse.ModeResult(mode.name(), true, seconds, meters < 0 ? null : meters,
                     longRoute, longRoute ? "El traslado supera los 120 minutos." : null);
         } catch (RestClientResponseException exception) {
-            log.warn("Legacy Google Routes returned HTTP {} for travel mode {}", exception.getStatusCode().value(), mode);
+            log.warn("Legacy Google Routes returned HTTP {} for travel mode {}", exception.getStatusCode().value(),
+                    mode);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Google Routes no pudo calcular el traslado.");
         } catch (RestClientException exception) {
             log.warn("Legacy Google Routes request failed: exceptionType={}", exception.getClass().getSimpleName());
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Google Routes no está disponible temporalmente.");
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Google Routes no está disponible temporalmente.");
         }
     }
 
@@ -86,8 +92,9 @@ public class GoogleRoutesDurationProvider implements RouteDurationProvider {
         if (value == null || !value.matches("\\d+(\\.\\d+)?s")) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Google Routes devolvió una duración no válida.");
         }
-        try { return (long) Math.ceil(Double.parseDouble(value.substring(0, value.length() - 1))); }
-        catch (NumberFormatException exception) {
+        try {
+            return (long) Math.ceil(Double.parseDouble(value.substring(0, value.length() - 1)));
+        } catch (NumberFormatException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Google Routes devolvió una duración no válida.");
         }
     }

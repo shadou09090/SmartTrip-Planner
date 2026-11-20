@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowLeft, LocateFixed, MapPin, Navigation, BedDouble, LayoutGrid, Map as MapIcon, Search, ExternalLink, Maximize2, Minimize2, Crosshair } from 'lucide-react';
 import { Button } from '../components/ui';
+import { formatFriendlyError } from '../lib/errorUtils';
 import LodgingSuggestionCard from '../components/LodgingSuggestionCard';
 import { apiRequest } from '../lib/api';
 import { formatHotelPrice, freshHotelLivePrices, isHotelQuoteFresh, normalizeHotelLivePrices } from '../lib/hotelLivePrices';
@@ -639,7 +640,7 @@ export default function MapPlaces({ trip, token, onBack, onPackageLodgingSelect,
                 <Search size={16} /> {hotelPriceStatus === 'loading' ? 'Consultando tarifas…' : hotelPriceStatus === 'ready' ? 'Actualizar tarifas' : 'Buscar precios y disponibilidad'}
               </button>
               <small>Precios en vivo de OBO Travel · consulta de solo lectura · disponibles como máximo durante 30 minutos.</small>
-              {hotelPriceError && <p role="alert" className="form-error">{hotelPriceError}</p>}
+              {hotelPriceError && <p role="alert" className="form-error">{formatFriendlyError(hotelPriceError, 'No se pudieron consultar tarifas en este momento. Inténtalo más tarde.')}</p>}
               {hotelPriceStatus === 'ready' && !liveHotelOffers.length && <p role="status" className="places-empty">
                 {normalizedHotelOffers.length ? 'La tarifa superó el límite de vigencia; vuelve a consultar antes de usarla.'
                   : hotelPrices?.results ? 'El proveedor no devolvió tarifas con importe y moneda reconocibles para esta búsqueda.'
@@ -668,7 +669,7 @@ export default function MapPlaces({ trip, token, onBack, onPackageLodgingSelect,
               <span><strong>Guardado en este viaje</strong><small>{lodging.nombre} · {lodging.direccion || 'Dirección no informada'}</small></span>
               <small>Seleccionar un lugar no crea una reserva.</small>
             </div>}
-            {lodgingError && <p role="alert" className="form-error">{lodgingError}</p>}
+            {lodgingError && <p role="alert" className="form-error">{formatFriendlyError(lodgingError, 'No se pudieron consultar sugerencias de alojamiento. Puedes registrar uno manualmente o reintentar.')}</p>}
             {lodgingNotice && <p role="status" className="places-empty">{lodgingNotice}</p>}
             <div className="lodging-toolbar">
               <label className="lodging-toolbar__search">Buscar por nombre o zona
@@ -698,7 +699,7 @@ export default function MapPlaces({ trip, token, onBack, onPackageLodgingSelect,
               {[0, 1, 2].map((item) => <div className="lodging-skeleton" key={item}><span /><i /><i /></div>)}
             </div>}
             {lodgingStatus === 'empty' && <p className="places-empty">No se encontraron alojamientos con ubicación válida. Puedes registrar uno manualmente desde el panel del viaje.</p>}
-            {lodgingStatus === 'error' && <button type="button" className="map-retry-button" onClick={() => setReloadKey((current) => current + 1)}>Reintentar búsqueda</button>}
+            {lodgingStatus === 'error' && <Button variant="secondary" type="button" className="map-retry-button" onClick={() => setReloadKey((current) => current + 1)}>Reintentar búsqueda</Button>}
             {lodgingStatus === 'ready' && !visibleLodgings.length && <p className="places-empty">No hay alojamientos que coincidan con estos filtros.</p>}
             {visibleLodgings.length > 0 && <ul className={`lodging-map-list ${lodgingView === 'cards' ? 'is-grid' : ''}`}>
               {visibleLodgings.map((place) => <li key={place.id}>

@@ -11,6 +11,8 @@ import { buildPackageSavePayload, classifyPackageSnapshot, countPackageActivitie
 import { emptyRecommendationStatus } from '../lib/recommendationSearchStatus';
 import TripGlobalBudget from './TripGlobalBudget';
 import { useTripPackageWorkspace, useWorkspaceState } from './TripPackageWorkspace';
+import { Button } from './ui';
+import { formatFriendlyError } from '../lib/errorUtils';
 
 export default function GeneradorItinerario({ token, trip: propTrip, tripData, userId, view = 'itinerary', onSummaryChange, onNavigateTab, autoCreateDraft = false, onNavigate }) {
   const trip = propTrip || tripData || {};
@@ -305,7 +307,12 @@ export default function GeneradorItinerario({ token, trip: propTrip, tripData, u
         .filter(([section, failure]) => section !== 'recommendations'
           && !(section === 'package' && String(failure?.message || '').includes('HTTP 404')))
         .map(([section, failure]) => `${section}: ${failure?.message || 'falló la solicitud'}`);
-      if (sectionErrors.length) setError(`Algunas secciones no se pudieron cargar: ${sectionErrors.join(' · ')}`);
+      if (sectionErrors.length) {
+        // If itinerary failed and there's no draft, notify politely
+        if (rejected.itinerary) {
+          setError(formatFriendlyError(rejected.itinerary, 'No se pudo sincronizar el itinerario con el servidor.'));
+        }
+      }
       const recommendationResult = fulfilled.recommendations;
       if (recommendationResult?.requiereSeleccionarIntereses) {
         try {
@@ -960,17 +967,17 @@ export default function GeneradorItinerario({ token, trip: propTrip, tripData, u
         {(packageLodging || lodging)?.nombre && !globalBudgetScenario?.included?.some((entry) => entry.category === 'Alojamiento')
           && <p role="status">{(packageLodging || lodging).nombre}: no hay tarifa en el escenario; añade una estimación manual en Presupuesto. Seleccionar el hotel no realiza una reserva.</p>}
         {packageFlight?.testData && <p role="status">La oferta Sandbox es simulada y no se incluye como precio real del viaje.</p>}
-        {error && <p className="form-error" role="alert">{error}</p>}
+        {error && <p className="form-error" role="alert">{formatFriendlyError(error)}</p>}
         {notice && <p className="trip-notice" role="status">{notice}</p>}
         <div className="package-summary-view__actions">
-          <button type="button" onClick={() => onNavigateTab?.('itinerary')}>Revisar itinerario</button>
-          <button type="button" onClick={() => onNavigateTab?.('budget')}>Revisar presupuesto</button>
-          <button type="button" disabled={exportingPdf || loading || effectiveActivityCount === 0} onClick={exportPdf}>
+          <Button variant="secondary" onClick={() => onNavigateTab?.('itinerary')}>Revisar itinerario</Button>
+          <Button variant="secondary" onClick={() => onNavigateTab?.('budget')}>Revisar presupuesto</Button>
+          <Button variant="secondary" disabled={exportingPdf || loading || effectiveActivityCount === 0} onClick={exportPdf}>
             {exportingPdf ? 'Preparando PDF…' : 'Exportar paquete a PDF'}
-          </button>
-          {hasSavablePackage && <button type="button" disabled={savingDraft || loading || !packageSyncReady || Boolean(packageConflict) || pendingSaveCount === 0 || ['server-changed', 'destination-changed', 'dates-changed', 'corrupt', 'server-unavailable'].includes(draftStorageStatus)} onClick={savePlanningDraft}>
+          </Button>
+          {hasSavablePackage && <Button variant="primary" disabled={savingDraft || loading || !packageSyncReady || Boolean(packageConflict) || pendingSaveCount === 0 || ['server-changed', 'destination-changed', 'dates-changed', 'corrupt', 'server-unavailable'].includes(draftStorageStatus)} onClick={savePlanningDraft}>
             {savingDraft ? 'Guardando…' : `Guardar itinerario (${pendingSaveCount} cambios · ${effectiveActivityCount} actividades)`}
-          </button>}
+          </Button>}
         </div>
       </section>
       <div className="package-itinerary-view" hidden={view !== 'itinerary'}>
@@ -1129,11 +1136,11 @@ export default function GeneradorItinerario({ token, trip: propTrip, tripData, u
             {recommendations.diagnostico?.errores?.map((diagnosticError, index) => <p role="status" key={`pipeline-${index}:${diagnosticError}`}>{diagnosticError}</p>)}
           </details>}
           {recommendationLoadError && <p className="external-recommendations__warning" role="alert">{recommendationLoadError}</p>}
-          {recommendationLoadError && <button type="button" onClick={load} disabled={loading}>Reintentar recomendaciones</button>}
+          {recommendationLoadError && <Button variant="secondary" type="button" onClick={load} disabled={loading}>Reintentar recomendaciones</Button>}
           {recommendations.avisosFuentes?.length > 0 && !loading && (
-            <button type="button" onClick={load} disabled={loading}>
+            <Button variant="secondary" type="button" onClick={load} disabled={loading}>
               Reintentar búsqueda de lugares
-            </button>
+            </Button>
           )}
           <button type="button" className="itinerary-suggest-button" onClick={buildSuggestedDraft} disabled={loading || savingDraft || !planningDays.length}>
             <Sparkles size={16} /> Generar itinerario sugerido
@@ -1208,27 +1215,26 @@ export default function GeneradorItinerario({ token, trip: propTrip, tripData, u
             <div className="activity-budget__title"><h3>Borrador local · cambios pendientes</h3></div>
             <p>Los cambios se muestran en el itinerario y el mapa. Todavía no se guardan en Oracle; confirma explícitamente para persistirlos.</p>
             <div className="itinerary-draft-actions">
-              <button type="button" disabled={loading || savingDraft} onClick={() => buildSuggestedDraft('keep')}>Completar días vacíos</button>
-              <button type="button" disabled={loading || savingDraft} onClick={() => buildSuggestedDraft('replace')}>Generar otra propuesta</button>
-              <button type="button" onClick={() => document.getElementById('trip-itinerary-days')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Editar itinerario</button>
-              <button type="button" disabled={exportingPdf || loading} onClick={exportPdf}>{exportingPdf ? 'Preparando PDF…' : 'Exportar PDF'}</button>
+              <Button variant="secondary" type="button" disabled={loading || savingDraft} onClick={() => buildSuggestedDraft('keep')}>Completar días vacíos</Button>
+              <Button variant="secondary" type="button" disabled={loading || savingDraft} onClick={() => buildSuggestedDraft('replace')}>Generar otra propuesta</Button>
+              <Button variant="secondary" type="button" onClick={() => document.getElementById('trip-itinerary-days')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Editar itinerario</Button>
+              <Button variant="secondary" type="button" disabled={exportingPdf || loading} onClick={exportPdf}>{exportingPdf ? 'Preparando PDF…' : 'Exportar PDF'}</Button>
             </div>
-            {hasSavablePackage && <button type="button" disabled={savingDraft || loading || !packageSyncReady || Boolean(packageConflict) || pendingSaveCount === 0 || ['server-changed', 'destination-changed', 'dates-changed', 'corrupt', 'server-unavailable'].includes(draftStorageStatus)} onClick={savePlanningDraft}>
+            {hasSavablePackage && <Button variant="primary" type="button" disabled={savingDraft || loading || !packageSyncReady || Boolean(packageConflict) || pendingSaveCount === 0 || ['server-changed', 'destination-changed', 'dates-changed', 'corrupt', 'server-unavailable'].includes(draftStorageStatus)} onClick={savePlanningDraft}>
               {savingDraft ? 'Guardando itinerario…' : `Guardar itinerario (${pendingSaveCount} cambios · ${effectiveActivityCount} actividades)`}
-            </button>}
-            <button type="button" disabled={savingDraft} onClick={discardLocalDraft}>Cancelar cambios
-            </button>
+            </Button>}
+            <Button variant="secondary" type="button" disabled={savingDraft} onClick={discardLocalDraft}>Cancelar cambios</Button>
           </section>}
           <small className="osm-attribution">© OpenStreetMap contributors · Datos bajo licencia <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">ODbL</a>.</small>
         </section>
 
         <section className="saved-itinerary" id="trip-itinerary-days">
           <div className="activity-budget__title"><h3>Itinerario de mi viaje</h3>
-            {itinerario && !recommendations?.requiereSeleccionarIntereses && <button type="button" disabled={saving || loading} onClick={prepararGeneracion}>Revisar actividades del catálogo</button>}
-            {!itinerario && <button type="button" disabled={saving || loading || !planningDays.length} onClick={prepararGeneracion}>Crear días del viaje</button>}
-            <button type="button" disabled={exportingPdf || loading} onClick={exportPdf}>
+            {itinerario && !recommendations?.requiereSeleccionarIntereses && <Button variant="secondary" type="button" disabled={saving || loading} onClick={prepararGeneracion}>Revisar actividades del catálogo</Button>}
+            {!itinerario && <Button variant="secondary" type="button" disabled={saving || loading || !planningDays.length} onClick={prepararGeneracion}>Crear días del viaje</Button>}
+            <Button variant="secondary" type="button" disabled={exportingPdf || loading} onClick={exportPdf}>
               {exportingPdf ? 'Preparando PDF…' : 'Exportar itinerario a PDF'}
-            </button>
+            </Button>
           </div>
           <p>{hasPendingPlan ? 'Los días muestran el borrador local pendiente de guardar.' : itinerario?.dias?.length ? 'Mostrando el itinerario guardado.' : 'Días temporales listos para planificar; todavía no hay datos guardados en Oracle.'}</p>
           {generationPreview && <section className="external-draft" aria-label="Propuesta del catálogo interno">
@@ -1238,11 +1244,11 @@ export default function GeneradorItinerario({ token, trip: propTrip, tripData, u
               <span><strong>{item.actividad.nombre}</strong> · disponible según la ficha interna; interés: {(item.interesesCoincidentes || []).join(', ') || 'sin coincidencia detallada'}</span>
               <small>{item.actividad.costo == null ? 'Precio no disponible' : money(item.actividad.costo)}</small>
             </li>)}</ul> : <p>No hay actividades del catálogo que coincidan con intereses y fechas. Los lugares externos se revisan y guardan por separado.</p>}
-            <button type="button" disabled={saving || loading} onClick={generarItinerario}>{saving ? 'Guardando…' : itinerario ? 'Confirmar y guardar propuesta del catálogo' : 'Confirmar y crear días del itinerario'}</button>
-            <button type="button" disabled={saving} onClick={() => setGenerationPreview(false)}>Cancelar</button>
+            <Button variant="primary" type="button" disabled={saving || loading} onClick={generarItinerario}>{saving ? 'Guardando…' : itinerario ? 'Confirmar y guardar propuesta del catálogo' : 'Confirmar y crear días del itinerario'}</Button>
+            <Button variant="secondary" type="button" disabled={saving} onClick={() => setGenerationPreview(false)}>Cancelar</Button>
           </section>}
-          {!loading && !itinerario && <p>Todavía no hay un itinerario guardado. Los días siguientes son temporales y se guardarán junto con una propuesta confirmada.</p>}
-          {!loading && !planningDays.length && !itinerario && <p>Las fechas del viaje no son válidas para crear días temporales.</p>}
+          {!loading && !itinerario && !hasPendingPlan && <p>Todavía no hay un itinerario guardado. Los días siguientes son temporales y se guardarán junto con una propuesta confirmada.</p>}
+          {!loading && !planningDays.length && !itinerario && !hasPendingPlan && <p>Las fechas del viaje no son válidas para crear días temporales.</p>}
           {!loading && draftItineraryDays.length ? <div className="planning-scroll-region planning-scroll-region--itinerary" aria-label="Días y actividades del itinerario" tabIndex="0">{draftItineraryDays.map((day, index) => (
             <article className="trip-list-item itinerary-day" key={day.id}>
               <div><strong>Día {index + 1}: {day.fecha}{day.temporal ? ' · temporal' : ''}</strong>

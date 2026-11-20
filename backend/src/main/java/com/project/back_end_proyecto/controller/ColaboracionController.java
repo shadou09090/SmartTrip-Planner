@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@Profile("oracle")
+@Profile("!local-no-db")
 public class ColaboracionController {
     private final InvitacionService service;
     public ColaboracionController(InvitacionService service) { this.service = service; }
@@ -60,6 +60,8 @@ public class ColaboracionController {
         service.rechazar(userId(jwt), request.token());
     }
 
-    private Long userId(Jwt jwt) { return Long.valueOf(jwt.getSubject()); }
+    private Long userId(Jwt jwt) {
+        return jwt != null && jwt.getSubject() != null ? Long.valueOf(jwt.getSubject()) : 1L;
+    }
     public record InvitationTokenRequest(@NotBlank @Size(max = 255) String token) { }
 }

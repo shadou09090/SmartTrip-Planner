@@ -37,7 +37,7 @@ import java.nio.channels.UnresolvedAddressException;
 import javax.net.ssl.SSLException;
 
 @Component
-@Profile("oracle")
+@Profile("!local-no-db")
 public class OpenStreetMapPlaceSource implements FuenteLugaresPublicos {
     private static final String NOMINATIM = "https://nominatim.openstreetmap.org/search";
     private static final String USER_AGENT = "SmartTripPlanner/1.0 (https://github.com/shadou09090/SmartTrip-Planner)";
@@ -72,10 +72,7 @@ public class OpenStreetMapPlaceSource implements FuenteLugaresPublicos {
                                     @Value("${smarttrip.places.read-timeout-ms:15000}") long readTimeoutMillis,
                                     @Value("${smarttrip.places.endpoint-cooldown-seconds:180}") long endpointCooldownSeconds,
                                     @Value("${smarttrip.places.daily-overpass-request-limit:80}") int dailyOverpassLimit) {
-        var httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(Math.max(1000, connectTimeoutMillis))).build();
-        var requestFactory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
-        // The Overpass query itself is capped at ten seconds; leave room for network overhead.
-        requestFactory.setReadTimeout(Duration.ofMillis(Math.max(1000, readTimeoutMillis)));
+        var requestFactory = com.project.back_end_proyecto.config.HttpRequestFactoryHelper.create(connectTimeoutMillis, readTimeoutMillis);
         this.client = builder.clone().requestFactory(requestFactory).build();
         this.parser = parser;
         this.destinationCoordinates = destinationCoordinates;

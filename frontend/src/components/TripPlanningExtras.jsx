@@ -5,6 +5,7 @@ import { Button } from './ui';
 import LodgingSuggestionCard from './LodgingSuggestionCard';
 import { createFlightDraftFromOffer, getDuffelSliceSummary, isSinglePersistableDuffelSlice } from '../lib/flightOfferDraft';
 import { useTripPackageWorkspace } from './TripPackageWorkspace';
+import { formatFriendlyError } from '../lib/errorUtils';
 
 const emptyLodging = { nombre: '', direccion: '', latitud: '', longitud: '' };
 const emptyFlight = { origen: '', destino: '', fechaSalida: '', fechaLlegada: '', aerolinea: '', numeroVuelo: '', precio: '' };
@@ -49,7 +50,6 @@ export default function TripPlanningExtras({ trip, token, panel = 'all', onPacka
   const load = useCallback(async () => {
     setError('');
     setExtrasLoaded(false);
-    const errors = [];
     const [lodgingResult, flightsResult] = await Promise.allSettled([
       apiRequest(`/api/viajes/${trip.id}/alojamiento`, { token }),
       apiRequest(`/api/viajes/${trip.id}/vuelos`, { token }),
@@ -61,25 +61,20 @@ export default function TripPlanningExtras({ trip, token, panel = 'all', onPacka
         nombre: savedLodging.nombre || '', direccion: savedLodging.direccion || '',
         latitud: savedLodging.latitud ?? '', longitud: savedLodging.longitud ?? '',
       } : emptyLodging);
-    } else errors.push(`Alojamiento guardado: ${lodgingResult.reason?.message || 'no disponible'}`);
+    }
     if (flightsResult.status === 'fulfilled') setFlights(Array.isArray(flightsResult.value) ? flightsResult.value : []);
-    else errors.push(`Vuelos guardados: ${flightsResult.reason?.message || 'no disponibles'}`);
     setExtrasLoaded(true);
 
     const pendingResult = await Promise.allSettled([apiRequest('/api/invitaciones/pendientes', { token })]);
     if (pendingResult[0].status === 'fulfilled') setPendingInvitations(Array.isArray(pendingResult[0].value) ? pendingResult[0].value : []);
-    else errors.push(`Invitaciones: ${pendingResult[0].reason?.message || 'no disponibles'}`);
     if (trip.rolAcceso === 'OWNER') {
       const [collaboratorResult, invitationResult] = await Promise.allSettled([
         apiRequest(`/api/viajes/${trip.id}/colaboradores`, { token }),
         apiRequest(`/api/viajes/${trip.id}/invitaciones`, { token }),
       ]);
       if (collaboratorResult.status === 'fulfilled') setCollaborators(Array.isArray(collaboratorResult.value) ? collaboratorResult.value : []);
-      else errors.push(`Colaboradores: ${collaboratorResult.reason?.message || 'no disponibles'}`);
       if (invitationResult.status === 'fulfilled') setInvitations(Array.isArray(invitationResult.value) ? invitationResult.value : []);
-      else errors.push(`Invitaciones del viaje: ${invitationResult.reason?.message || 'no disponibles'}`);
     }
-    if (errors.length) setError(errors.join(' · '));
   }, [token, trip.id, trip.rolAcceso]);
 
   useEffect(() => { load(); }, [load]);
@@ -273,8 +268,8 @@ export default function TripPlanningExtras({ trip, token, panel = 'all', onPacka
       <div className="trip-card">
         <p className="eyebrow">Reservas</p><h2>Alojamiento y vuelos</h2>
         <p>Estos datos se consultan y guardan en Oracle para este viaje.</p>
-        {error && <p role="alert" className="form-error">{error}</p>}
-        {notice && <p role="status">{notice}</p>}
+        {error && <p role="alert" className="form-error">{formatFriendlyError(error)}</p>}
+        {notice && <p role="status" className="trip-notice">{notice}</p>}
 
         <section className="extras-lodging-panel" aria-label="Alojamiento" hidden={panel === 'flights' || panel === 'collaborators'}>
         <h3>Alojamiento (uno por itinerario)</h3>
@@ -286,7 +281,7 @@ export default function TripPlanningExtras({ trip, token, panel = 'all', onPacka
         <Button variant="primary" type="button" disabled={searchingLodging} onClick={searchLodging}>
           {searchingLodging ? 'Buscando cerca del destino…' : `Buscar alojamientos en ${trip.destination}`}
         </Button>
-        {lodgingSearchError && <p role="alert" className="form-error">{lodgingSearchError}</p>}
+        {lodgingSearchError && <p role="alert" className="form-error">{formatFriendlyError(lodgingSearchError)}</p>}
         {lodgingSearchStatus === 'loading' && <div className="lodging-suggestions lodging-skeleton-list" aria-label="Cargando alojamientos">
           {[0, 1, 2].map((item) => <div className="lodging-skeleton" key={item}><span /><i /><i /></div>)}
         </div>}
@@ -321,10 +316,12 @@ export default function TripPlanningExtras({ trip, token, panel = 'all', onPacka
         <h4>Vuelos registrados para el viaje</h4>
         {flights.length === 0 ? <p>No hay vuelos registrados.</p> : (
           <ul className="planning-scroll-region planning-scroll-region--flight-records" aria-label="Vuelos registrados" tabIndex="0">{flights.map((flight) => (
-            <li key={flight.id}>
-              {flight.origen} → {flight.destino}, {flight.fechaSalida}{flight.precio != null ? ` · ${flight.precio}` : ''}
-              <button type="button" onClick={() => editFlight(flight)}>Editar</button>
-              <button type="button" onClick={() => showHistory(flight)}>Historial de precios</button>
+            <li key={flight.id} className="flight-record-item">
+              <span>{flight.origen} → {flight.destino}, {flight.fechaSalida}{flight.precio != null ? ` · ${flight.precio}` : ''}</span>
+              <div className="flight-record-actions">
+                <Button variant="secondary" type="button" onClick={() => editFlight(flight)}>Editar</Button>
+                <Button variant="secondary" type="button" onClick={() => showHistory(flight)}>Historial de precios</Button>
+              </div>
               {history?.vueloId === flight.id && <ul>{history.rows.map((row) => <li key={row.id}>{row.precio} · {row.fechaRegistro}</li>)}</ul>}
             </li>
           ))}</ul>
@@ -365,28 +362,31 @@ export default function TripPlanningExtras({ trip, token, panel = 'all', onPacka
         <section className="extras-collaborator-panel" aria-label="Colaboradores" hidden={panel === 'lodging' || panel === 'flights'}>
         {trip.rolAcceso === 'OWNER' && <>
           <h3>Colaboradores</h3>
-          {collaborators.length === 0 ? <p>No hay colaboradores.</p> : <ul>{collaborators.map((item) => (
-            <li key={item.usuarioId}>{item.nombre} · {item.correo} · {item.rol}
-              <button type="button" onClick={() => removeCollaborator(item.usuarioId)}>Quitar acceso</button>
+          {collaborators.length === 0 ? <p className="places-empty">No hay colaboradores registrados en este viaje.</p> : <ul className="collaborators-list">{collaborators.map((item) => (
+            <li key={item.usuarioId} className="collaborator-item">
+              <span><strong>{item.nombre}</strong> · {item.correo} · <em>{item.rol}</em></span>
+              <Button variant="secondary" type="button" onClick={() => removeCollaborator(item.usuarioId)}>Quitar acceso</Button>
             </li>
           ))}</ul>}
           <form className="trip-edit-form" onSubmit={createInvitation}>
             <h4>Invitar por correo</h4>
             <label>Correo del usuario<input type="email" required maxLength="150" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} /></label>
             <label>Permiso<select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}><option value="READER">Lector</option><option value="EDITOR">Editor</option></select></label>
-            <button type="submit">Crear invitación</button>
+            <Button variant="primary" type="submit">Crear invitación</Button>
           </form>
-          {issuedInvitation && <p role="status">Código de invitación (se muestra solo al crearla): <code>{issuedInvitation.invitationToken}</code></p>}
+          {issuedInvitation && <p role="status" className="trip-notice">Código de invitación (se muestra solo al crearla): <code>{issuedInvitation.invitationToken}</code></p>}
           <h4>Invitaciones enviadas</h4>
-          <ul>{invitations.filter((item) => item.correo).map((item) => <li key={item.id}>{item.correo} · {item.rol} · {item.estado}</li>)}</ul>
+          <ul className="sent-invitations-list">{invitations.filter((item) => item.correo).map((item) => <li key={item.id}>{item.correo} · {item.rol} · {item.estado}</li>)}</ul>
         </>}
 
         <h3>Responder una invitación</h3>
-        {pendingInvitations.map((item) => <p key={item.id}>Invitación pendiente para {item.correo} · {item.rol} · vence {item.expiresAt}</p>)}
-        <form onSubmit={(event) => { event.preventDefault(); respondToInvitation('aceptar'); }}>
+        {pendingInvitations.map((item) => <p key={item.id} className="trip-notice">Invitación pendiente para {item.correo} · {item.rol} · vence {item.expiresAt}</p>)}
+        <form className="trip-edit-form invitation-response-form" onSubmit={(event) => { event.preventDefault(); respondToInvitation('aceptar'); }}>
           <label>Código recibido<input required maxLength="255" value={incomingToken} onChange={(e) => setIncomingToken(e.target.value)} /></label>
-          <button type="submit">Aceptar invitación</button>
-          <button type="button" onClick={() => respondToInvitation('rechazar')}>Rechazar</button>
+          <div className="invitation-action-buttons">
+            <Button variant="primary" type="submit">Aceptar invitación</Button>
+            <Button variant="secondary" type="button" onClick={() => respondToInvitation('rechazar')}>Rechazar</Button>
+          </div>
         </form>
         </section>
       </div>

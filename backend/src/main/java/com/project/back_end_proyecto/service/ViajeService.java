@@ -15,6 +15,7 @@ import com.project.back_end_proyecto.repository.InteresRepository;
 import com.project.back_end_proyecto.repository.UserRepository;
 import com.project.back_end_proyecto.repository.ViajeInteresRepository;
 import com.project.back_end_proyecto.repository.ViajeRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +41,7 @@ public class ViajeService {
         this(viajeRepository, null, null, null, null, null);
     }
 
+    @Autowired
     public ViajeService(ViajeRepository viajeRepository, UserRepository userRepository,
                         InteresRepository interesRepository, ViajeInteresRepository viajeInteresRepository,
                         TripPermissionService tripPermissionService, ViajeDeletionService viajeDeletionService) {

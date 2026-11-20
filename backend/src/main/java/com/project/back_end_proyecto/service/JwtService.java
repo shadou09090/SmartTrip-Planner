@@ -15,7 +15,7 @@ import java.time.Duration;
 import java.time.Instant;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class JwtService {
 
     private static final Duration TOKEN_LIFETIME = Duration.ofMinutes(20);

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../lib/api';
 import { Button } from './ui';
+import { formatFriendlyError } from '../lib/errorUtils';
 import '../styles/flights.css';
 
 const initialPlace = (value) => ({ name: value || '', iataCode: '', type: '' });
@@ -44,7 +45,7 @@ export default function FlightSearchPanel({ trip, token, onSelectOffer, selected
     const timer = window.setTimeout(() => {
       apiRequest(`${placesEndpoint}?query=${encodeURIComponent(query)}`, { token })
         .then((items) => { if (active) setOriginSuggestions(Array.isArray(items) ? items : []); })
-        .catch((requestError) => { if (active) setError(requestError.message); });
+        .catch(() => { if (active) setOriginSuggestions([]); });
     }, 350);
     return () => { active = false; window.clearTimeout(timer); };
   }, [origin.name, origin.iataCode, token, placesEndpoint]);
@@ -59,7 +60,7 @@ export default function FlightSearchPanel({ trip, token, onSelectOffer, selected
     const timer = window.setTimeout(() => {
       apiRequest(`${placesEndpoint}?query=${encodeURIComponent(query)}`, { token })
         .then((items) => { if (active) setDestinationSuggestions(Array.isArray(items) ? items : []); })
-        .catch((requestError) => { if (active) setError(requestError.message); });
+        .catch(() => { if (active) setDestinationSuggestions([]); });
     }, 350);
     return () => { active = false; window.clearTimeout(timer); };
   }, [destination.name, destination.iataCode, token, placesEndpoint]);
@@ -137,7 +138,7 @@ export default function FlightSearchPanel({ trip, token, onSelectOffer, selected
           {loading ? 'Buscando ofertas…' : 'Buscar vuelos'}
         </Button>
       </form>
-      {error && <div role="alert" className="flight-error"><p className="form-error">{error}</p><Button variant="secondary" type="button" onClick={search} disabled={loading}>Reintentar búsqueda</Button></div>}
+      {error && <div role="alert" className="flight-error"><p className="form-error">{formatFriendlyError(error, 'No fue posible completar la búsqueda de vuelos. Verifica las fechas o intenta más tarde.')}</p><Button variant="secondary" type="button" onClick={search} disabled={loading}>Reintentar búsqueda</Button></div>}
       {results && <>
         <p className={`flight-provider-notice ${results.testData ? 'sandbox' : ''}`} role="status">{results.notice}</p>
         <div className="flight-results-toolbar">

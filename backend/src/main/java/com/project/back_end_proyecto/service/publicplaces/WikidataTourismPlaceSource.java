@@ -27,22 +27,28 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Discovers notable, geolocated tourist places from Wikidata's public SPARQL service. */
+/**
+ * Discovers notable, geolocated tourist places from Wikidata's public SPARQL
+ * service.
+ */
 @Component
-@Profile("oracle")
+@Profile("!local-no-db")
 public class WikidataTourismPlaceSource {
     private static final Logger log = LoggerFactory.getLogger(WikidataTourismPlaceSource.class);
     private static final String ENDPOINT = "https://query.wikidata.org/sparql";
     private static final String USER_AGENT = "SmartTripPlanner/1.0 (https://github.com/shadou09090/SmartTrip-Planner)";
-    // A 150 km recursive-class query frequently exceeds public WDQS execution limits and
-    // returns regional noise. Keep discovery city-scale; excursions are explicitly optional.
+    // A 150 km recursive-class query frequently exceeds public WDQS execution
+    // limits and
+    // returns regional noise. Keep discovery city-scale; excursions are explicitly
+    // optional.
     private static final int SEARCH_RADIUS_KM = 40;
     private static final int RESULT_LIMIT = 100;
     private static final Duration CACHE_TTL = Duration.ofHours(6);
     private static final Duration EMPTY_CACHE_TTL = Duration.ofMinutes(15);
     private static final Duration MINIMUM_REQUEST_INTERVAL = Duration.ofSeconds(5);
     private static final Duration DEFAULT_COOLDOWN = Duration.ofMinutes(2);
-    private static final Pattern COORDINATE = Pattern.compile("Point\\(\\s*(-?\\d+(?:\\.\\d+)?)\\s+(-?\\d+(?:\\.\\d+)?)\\s*\\)");
+    private static final Pattern COORDINATE = Pattern
+            .compile("Point\\(\\s*(-?\\d+(?:\\.\\d+)?)\\s+(-?\\d+(?:\\.\\d+)?)\\s*\\)");
     private static final String QUERY_TEMPLATE = """
             PREFIX wd: <http://www.wikidata.org/entity/>
             PREFIX wdt: <http://www.wikidata.org/prop/direct/>
@@ -83,13 +89,11 @@ public class WikidataTourismPlaceSource {
 
     @Autowired
     public WikidataTourismPlaceSource(RestClient.Builder builder, OpenStreetMapPlaceSource geocoder,
-                                     @Value("${smarttrip.places.wikidata.enabled:true}") boolean enabled,
-                                     @Value("${smarttrip.places.wikidata.connect-timeout-ms:3000}") long connectTimeoutMs,
-                                     @Value("${smarttrip.places.wikidata.read-timeout-ms:10000}") long readTimeoutMs) {
-        var httpClient = java.net.http.HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(Math.max(1000, connectTimeoutMs))).build();
-        var requestFactory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofMillis(Math.max(1000, readTimeoutMs)));
+            @Value("${smarttrip.places.wikidata.enabled:true}") boolean enabled,
+            @Value("${smarttrip.places.wikidata.connect-timeout-ms:3000}") long connectTimeoutMs,
+            @Value("${smarttrip.places.wikidata.read-timeout-ms:10000}") long readTimeoutMs) {
+        var requestFactory = com.project.back_end_proyecto.config.HttpRequestFactoryHelper.create(connectTimeoutMs,
+                readTimeoutMs);
         this.client = builder.clone().baseUrl(ENDPOINT).requestFactory(requestFactory).build();
         this.geocoder = geocoder;
         this.enabled = enabled;
@@ -108,10 +112,12 @@ public class WikidataTourismPlaceSource {
     }
 
     public synchronized List<LugarPublico> buscar(String destination) {
-        if (!enabled) return List.of();
+        if (!enabled)
+            return List.of();
         String key = normalize(destination);
         CachedPlaces cached = cache.get(key);
-        if (cached != null && cached.expiresAt().isAfter(clock.instant())) return cached.places();
+        if (cached != null && cached.expiresAt().isAfter(clock.instant()))
+            return cached.places();
         if (clock.instant().isBefore(cooldownUntil)) {
             throw new ErrorFuentePublica("Wikidata solicitó una pausa temporal para proteger su servicio público.");
         }
@@ -122,9 +128,11 @@ public class WikidataTourismPlaceSource {
         } catch (RuntimeException failure) {
             log.warn("Wikidata place search skipped because geocoding failed: exceptionType={}",
                     failure.getClass().getSimpleName());
-            throw new ErrorFuentePublica("No se pudo ubicar el destino para consultar atracciones en Wikidata.", failure);
+            throw new ErrorFuentePublica("No se pudo ubicar el destino para consultar atracciones en Wikidata.",
+                    failure);
         }
-        if (center == null) return List.of();
+        if (center == null)
+            return List.of();
         validate(center);
         respectRequestInterval();
 
@@ -138,33 +146,41 @@ public class WikidataTourismPlaceSource {
             Map<?, ?> response = client.post().uri(ENDPOINT).contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .accept(MediaType.parseMediaType("application/sparql-results+json"))
                     .header("User-Agent", USER_AGENT).body(form).retrieve()
-                    .body(new ParameterizedTypeReference<>() { });
+                    .body(new ParameterizedTypeReference<>() {
+                    });
             List<LugarPublico> places = parse(response);
-            log.info("provider_request provider=Wikidata operation=tourism endpoint=query.wikidata.org/sparql status=200 duration_ms={} results={}",
+            log.info(
+                    "provider_request provider=Wikidata operation=tourism endpoint=query.wikidata.org/sparql status=200 duration_ms={} results={}",
                     ProviderFailureDiagnostics.elapsedMillis(startedNanos), places.size());
             Duration ttl = places.isEmpty() ? EMPTY_CACHE_TTL : CACHE_TTL;
             cache.put(key, new CachedPlaces(places, clock.instant().plus(ttl)));
             if (cache.size() > 400) {
                 cache.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(clock.instant()));
-                if (cache.size() > 400) cache.clear();
+                if (cache.size() > 400)
+                    cache.clear();
             }
             return places;
         } catch (RestClientResponseException failure) {
             int status = failure.getStatusCode().value();
             cooldownUntil = retryAt(failure, status);
-            log.warn("provider_request provider=Wikidata operation=tourism endpoint=query.wikidata.org/sparql status={} stage=http_{} duration_ms={} exceptionTypes={}",
+            log.warn(
+                    "provider_request provider=Wikidata operation=tourism endpoint=query.wikidata.org/sparql status={} stage=http_{} duration_ms={} exceptionTypes={}",
                     status, status, ProviderFailureDiagnostics.elapsedMillis(startedNanos),
                     ProviderFailureDiagnostics.exceptionTypes(failure));
-            throw new ErrorFuentePublica("Wikidata no está disponible temporalmente para descubrir atractivos.", failure);
+            throw new ErrorFuentePublica("Wikidata no está disponible temporalmente para descubrir atractivos.",
+                    failure);
         } catch (RestClientException failure) {
             cooldownUntil = clock.instant().plus(DEFAULT_COOLDOWN);
-            log.warn("provider_request provider=Wikidata operation=tourism endpoint=query.wikidata.org/sparql status=no_http_response stage={} duration_ms={} exceptionTypes={}",
+            log.warn(
+                    "provider_request provider=Wikidata operation=tourism endpoint=query.wikidata.org/sparql status=no_http_response stage={} duration_ms={} exceptionTypes={}",
                     ProviderFailureDiagnostics.stage(failure), ProviderFailureDiagnostics.elapsedMillis(startedNanos),
                     ProviderFailureDiagnostics.exceptionTypes(failure));
-            throw new ErrorFuentePublica("Wikidata no está disponible temporalmente para descubrir atractivos.", failure);
+            throw new ErrorFuentePublica("Wikidata no está disponible temporalmente para descubrir atractivos.",
+                    failure);
         } catch (RuntimeException failure) {
             cooldownUntil = clock.instant().plus(DEFAULT_COOLDOWN);
-            log.warn("provider_request provider=Wikidata operation=tourism endpoint=query.wikidata.org/sparql status=200 stage=invalid_response duration_ms={} exceptionType={}",
+            log.warn(
+                    "provider_request provider=Wikidata operation=tourism endpoint=query.wikidata.org/sparql status=200 stage=invalid_response duration_ms={} exceptionType={}",
                     ProviderFailureDiagnostics.elapsedMillis(startedNanos), failure.getClass().getSimpleName());
             throw new ErrorFuentePublica("Wikidata devolvió una respuesta de lugares no válida.", failure);
         }
@@ -177,13 +193,15 @@ public class WikidataTourismPlaceSource {
         }
         Map<String, LugarPublico> places = new LinkedHashMap<>();
         for (Object value : bindings) {
-            if (!(value instanceof Map<?, ?> binding)) continue;
+            if (!(value instanceof Map<?, ?> binding))
+                continue;
             String entityUrl = value(binding, "item");
             String qid = entityId(entityUrl);
             String name = value(binding, "itemLabel");
             BigDecimal[] point = coordinates(value(binding, "coordinate"));
             if (qid == null || name == null || name.isBlank() || point == null
-                    || !valid(point[0], -90, 90) || !valid(point[1], -180, 180)) continue;
+                    || !valid(point[0], -90, 90) || !valid(point[1], -180, 180))
+                continue;
             String article = safeWikipediaUrl(value(binding, "article"));
             String type = value(binding, "tourismTypeLabel");
             BigDecimal distance = decimal(value(binding, "distance"));
@@ -195,12 +213,17 @@ public class WikidataTourismPlaceSource {
             tags.put("wikidata", qid);
             tags.put("wikidata_type", type == null ? "" : type);
             tags.put("categories", type == null ? "" : type);
-            if (sitelinks != null && sitelinks.matches("\\d+")) tags.put("wikidata_sitelinks", sitelinks);
-            if (country != null) tags.put("country", country);
-            if (adminArea != null) tags.put("admin_area", adminArea);
+            if (sitelinks != null && sitelinks.matches("\\d+"))
+                tags.put("wikidata_sitelinks", sitelinks);
+            if (country != null)
+                tags.put("country", country);
+            if (adminArea != null)
+                tags.put("admin_area", adminArea);
             tags.put("region_scope", classifyScope(distance));
-            if (distance != null) tags.put("distance_km", distance.stripTrailingZeros().toPlainString());
-            if (article != null) tags.put("wikipedia_url", article);
+            if (distance != null)
+                tags.put("distance_km", distance.stripTrailingZeros().toPlainString());
+            if (article != null)
+                tags.put("wikipedia_url", article);
             String description = value(binding, "itemDescription");
             String sourceUrl = article != null ? article : "https://www.wikidata.org/wiki/" + qid;
             LugarPublico place = new LugarPublico("wikidata:" + qid, name.trim(), description,
@@ -228,7 +251,8 @@ public class WikidataTourismPlaceSource {
 
     private Instant retryAt(RestClientResponseException failure, int status) {
         long seconds = status == 429 || status == 503 ? 60 : DEFAULT_COOLDOWN.toSeconds();
-        String retryAfter = failure.getResponseHeaders() == null ? null : failure.getResponseHeaders().getFirst("Retry-After");
+        String retryAfter = failure.getResponseHeaders() == null ? null
+                : failure.getResponseHeaders().getFirst("Retry-After");
         if (retryAfter != null) {
             try {
                 seconds = Math.max(seconds, Long.parseLong(retryAfter));
@@ -236,7 +260,8 @@ public class WikidataTourismPlaceSource {
                 try {
                     return java.time.ZonedDateTime.parse(retryAfter,
                             java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant();
-                } catch (java.time.format.DateTimeParseException ignoredDate) { }
+                } catch (java.time.format.DateTimeParseException ignoredDate) {
+                }
             }
         }
         return clock.instant().plusSeconds(seconds);
@@ -244,65 +269,86 @@ public class WikidataTourismPlaceSource {
 
     private static String category(String type) {
         String normalized = RelevanceScorer.normalize(type);
-        if (normalized.contains("museum")) return "Museo / patrimonio cultural";
+        if (normalized.contains("museum"))
+            return "Museo / patrimonio cultural";
         if (normalized.contains("monument") || normalized.contains("historic") || normalized.contains("heritage")) {
             return "Monumento / patrimonio histórico";
         }
-        if (normalized.contains("theme park") || normalized.contains("amusement park")) return "Parque temático";
-        if (normalized.contains("palace")) return "Palacio / arquitectura";
-        if (normalized.contains("mosque") || normalized.contains("religious")) return "Lugar de interés religioso";
-        if (normalized.contains("national park") || normalized.contains("beach")) return "Naturaleza";
+        if (normalized.contains("theme park") || normalized.contains("amusement park"))
+            return "Parque temático";
+        if (normalized.contains("palace"))
+            return "Palacio / arquitectura";
+        if (normalized.contains("mosque") || normalized.contains("religious"))
+            return "Lugar de interés religioso";
+        if (normalized.contains("national park") || normalized.contains("beach"))
+            return "Naturaleza";
         return "Atracción turística catalogada en Wikidata";
     }
 
     private static String classifyScope(BigDecimal distanceKm) {
-        if (distanceKm == null) return "LOCAL_ATTRACTION";
-        if (distanceKm.compareTo(BigDecimal.valueOf(100)) >= 0) return "EXCURSION_OPTIONAL";
-        if (distanceKm.compareTo(BigDecimal.valueOf(35)) > 0) return "REGIONAL_ATTRACTION";
+        if (distanceKm == null)
+            return "LOCAL_ATTRACTION";
+        if (distanceKm.compareTo(BigDecimal.valueOf(100)) >= 0)
+            return "EXCURSION_OPTIONAL";
+        if (distanceKm.compareTo(BigDecimal.valueOf(35)) > 0)
+            return "REGIONAL_ATTRACTION";
         return "LOCAL_ATTRACTION";
     }
 
     private static String location(String adminArea, String country) {
-        if (adminArea == null || adminArea.isBlank()) return country;
+        if (adminArea == null || adminArea.isBlank())
+            return country;
         if (country == null || country.isBlank()
-                || RelevanceScorer.normalize(adminArea).equals(RelevanceScorer.normalize(country))) return adminArea;
+                || RelevanceScorer.normalize(adminArea).equals(RelevanceScorer.normalize(country)))
+            return adminArea;
         return adminArea + ", " + country;
     }
 
     private static String entityId(String uri) {
-        if (uri == null || !uri.startsWith("http://www.wikidata.org/entity/")) return null;
+        if (uri == null || !uri.startsWith("http://www.wikidata.org/entity/"))
+            return null;
         String id = uri.substring(uri.lastIndexOf('/') + 1);
         return id.matches("Q[1-9][0-9]*") ? id : null;
     }
 
     private static BigDecimal[] coordinates(String value) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         Matcher matcher = COORDINATE.matcher(value);
-        if (!matcher.matches()) return null;
+        if (!matcher.matches())
+            return null;
         BigDecimal longitude = decimal(matcher.group(1));
         BigDecimal latitude = decimal(matcher.group(2));
-        return longitude == null || latitude == null ? null : new BigDecimal[]{latitude, longitude};
+        return longitude == null || latitude == null ? null : new BigDecimal[] { latitude, longitude };
     }
 
     private static String safeWikipediaUrl(String value) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         try {
             URI uri = URI.create(value);
             return "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null
                     && uri.getHost().equalsIgnoreCase("en.wikipedia.org") ? value : null;
-        } catch (IllegalArgumentException ignored) { return null; }
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     private static String value(Map<?, ?> binding, String key) {
-        if (!(binding.get(key) instanceof Map<?, ?> item)) return null;
+        if (!(binding.get(key) instanceof Map<?, ?> item))
+            return null;
         Object value = item.get("value");
         return value == null ? null : value.toString();
     }
 
     private static BigDecimal decimal(String value) {
-        if (value == null) return null;
-        try { return new BigDecimal(value); }
-        catch (NumberFormatException ignored) { return null; }
+        if (value == null)
+            return null;
+        try {
+            return new BigDecimal(value);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     private static boolean valid(BigDecimal value, int min, int max) {
@@ -320,5 +366,6 @@ public class WikidataTourismPlaceSource {
         return value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("\\s+", " ");
     }
 
-    private record CachedPlaces(List<LugarPublico> places, Instant expiresAt) { }
+    private record CachedPlaces(List<LugarPublico> places, Instant expiresAt) {
+    }
 }

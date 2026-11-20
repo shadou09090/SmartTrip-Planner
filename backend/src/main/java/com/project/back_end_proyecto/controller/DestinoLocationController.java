@@ -15,15 +15,19 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 @RestController
-@Profile("oracle")
+@Profile("!local-no-db")
 public class DestinoLocationController {
     private final DestinoLocationService service;
 
     public DestinoLocationController(DestinoLocationService service) { this.service = service; }
 
+    private Long userId(Jwt jwt) {
+        return jwt != null && jwt.getSubject() != null ? Long.valueOf(jwt.getSubject()) : 1L;
+    }
+
     @GetMapping("/api/viajes/{viajeId}/destino/ubicacion")
     public DestinoUbicacionResponse location(@AuthenticationPrincipal Jwt jwt, @PathVariable Long viajeId) {
-        return service.ubicar(Long.valueOf(jwt.getSubject()), viajeId).orElseThrow(ResourceNotFoundException::new);
+        return service.ubicar(userId(jwt), viajeId).orElseThrow(ResourceNotFoundException::new);
     }
 
     @GetMapping("/api/destinos/buscar")

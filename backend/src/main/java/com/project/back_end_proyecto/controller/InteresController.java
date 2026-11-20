@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@Profile("oracle")
+@Profile("!local-no-db")
 public class InteresController {
     private final InteresRepository interesRepository;
     public InteresController(InteresRepository interesRepository) { this.interesRepository = interesRepository; }

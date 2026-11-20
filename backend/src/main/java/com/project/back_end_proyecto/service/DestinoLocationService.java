@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.List;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class DestinoLocationService {
     private final TripPermissionService permissions;
     private final FuenteLugaresPublicos placesSource;
@@ -19,7 +19,7 @@ public class DestinoLocationService {
 
     @Autowired
     public DestinoLocationService(TripPermissionService permissions, FuenteLugaresPublicos placesSource,
-                                  TripDestinationCoordinateResolver tripCoordinates) {
+            TripDestinationCoordinateResolver tripCoordinates) {
         this.permissions = permissions;
         this.placesSource = placesSource;
         this.tripCoordinates = tripCoordinates;
@@ -42,7 +42,8 @@ public class DestinoLocationService {
     }
 
     public List<DestinoCandidatoResponse> sugerir(String consulta) {
-        if (consulta == null || consulta.trim().length() < 2 || consulta.length() > 160) return List.of();
+        if (consulta == null || consulta.trim().length() < 2 || consulta.length() > 160)
+            return List.of();
         return placesSource.buscarDestinos(consulta).stream()
                 .map(item -> new DestinoCandidatoResponse(item.id(), item.nombreCompleto(), item.ciudad(),
                         item.region(), item.pais(), item.tipo(), item.latitud(), item.longitud(), item.proveedor()))

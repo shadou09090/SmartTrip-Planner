@@ -25,13 +25,15 @@ export default function Navbar({ currentPage, isAuthenticated, hasTrip, onNaviga
           </Button>
         )}
 
-        <Button
-          variant={currentPage === 'itinerary' ? 'primary' : 'secondary'}
-          onClick={() => onNavigate('itinerary')}
-        >
-          <CalendarDays size={18} />
-          Itinerario
-        </Button>
+        {currentPage !== 'home' && (
+          <Button
+            variant={currentPage === 'itinerary' ? 'primary' : 'secondary'}
+            onClick={() => onNavigate('itinerary')}
+          >
+            <CalendarDays size={18} />
+            Itinerario
+          </Button>
+        )}
         
         {isAuthenticated && isLocalDevSession ? (
           <>

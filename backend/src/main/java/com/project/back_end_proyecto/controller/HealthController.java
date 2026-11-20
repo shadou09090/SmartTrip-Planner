@@ -12,7 +12,7 @@ import java.util.Map;
 
 /** Readiness probe used by the production host; never returns database details. */
 @RestController
-@Profile("oracle")
+@Profile("!local-no-db")
 public class HealthController {
     private final JdbcTemplate jdbc;
 

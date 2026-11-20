@@ -17,7 +17,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 
 @RestController
-@Profile("oracle")
+@Profile("!local-no-db")
 public class ViajeExtrasController {
     private final ViajeExtrasService service;
     private final FlightSearchService flightSearchService;
@@ -90,7 +90,9 @@ public class ViajeExtrasController {
         return service.historial(userId(jwt), viajeId, vueloId);
     }
 
-    private Long userId(Jwt jwt) { return Long.valueOf(jwt.getSubject()); }
+    private Long userId(Jwt jwt) {
+        return jwt != null && jwt.getSubject() != null ? Long.valueOf(jwt.getSubject()) : 1L;
+    }
 
     private static LocalDateTime parseDuffelDateTime(String value) {
         try { return OffsetDateTime.parse(value).toLocalDateTime(); }

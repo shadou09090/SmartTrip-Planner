@@ -35,7 +35,12 @@ export default function Login({ onNavigate, onLogin }) {
       setFormData({ email: '', password: '', bootstrapToken: '' });
       onLogin(localDevMode ? { ...loginResponse, localDevSession: true } : loginResponse);
     } catch (requestError) {
-      setError(requestError.message);
+      const msg = requestError?.message || '';
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        setError('No se pudo conectar con el servidor backend (http://localhost:8080). Verifica que el backend esté iniciado.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setSubmitted(false);
     }

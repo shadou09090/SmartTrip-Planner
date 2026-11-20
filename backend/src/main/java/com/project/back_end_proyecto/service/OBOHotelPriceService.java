@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class OBOHotelPriceService {
     private static final String MCP_URL = "https://onebookingonline.com/mcp";
     private static final int MAX_GUESTS = 8;
@@ -29,7 +29,8 @@ public class OBOHotelPriceService {
 
     public OBOHotelPriceService(TripPermissionService permissions, RestClient.Builder builder, ObjectMapper mapper) {
         this.permissions = permissions;
-        this.client = builder.clone().baseUrl(MCP_URL).build();
+        var requestFactory = com.project.back_end_proyecto.config.HttpRequestFactoryHelper.create(3000, 10000);
+        this.client = builder.clone().baseUrl(MCP_URL).requestFactory(requestFactory).build();
         this.mapper = mapper;
     }
 

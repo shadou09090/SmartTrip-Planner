@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class ViajeDeletionService {
     private final TripPermissionService permissions;
     private final ViajeRepository viajes;

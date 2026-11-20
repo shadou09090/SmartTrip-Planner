@@ -18,9 +18,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-/** Resolves a trip destination from providers, then from coordinates already saved on that trip. */
+/**
+ * Resolves a trip destination from providers, then from coordinates already
+ * saved on that trip.
+ */
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class TripDestinationCoordinateResolver {
     private static final Logger log = LoggerFactory.getLogger(TripDestinationCoordinateResolver.class);
     private final FuenteLugaresPublicos places;
@@ -30,9 +33,9 @@ public class TripDestinationCoordinateResolver {
     private final DestinoCoordinateCache cache;
 
     public TripDestinationCoordinateResolver(FuenteLugaresPublicos places, ItinerarioRepository itineraries,
-                                             AlojamientoRepository lodgings,
-                                             ItinerarioActividadRepository assignments,
-                                             DestinoCoordinateCache cache) {
+            AlojamientoRepository lodgings,
+            ItinerarioActividadRepository assignments,
+            DestinoCoordinateCache cache) {
         this.places = places;
         this.itineraries = itineraries;
         this.lodgings = lodgings;
@@ -49,33 +52,41 @@ public class TripDestinationCoordinateResolver {
             }
         } catch (RuntimeException error) {
             providerFailure = error;
-            log.info("trip_destination_coordinates provider=unavailable fallback=persisted_trip_coordinates tripId={} exceptionType={}",
+            log.info(
+                    "trip_destination_coordinates provider=unavailable fallback=persisted_trip_coordinates tripId={} exceptionType={}",
                     trip.getId(), error.getClass().getSimpleName());
         }
 
         Optional<CoordenadasPublicas> persisted = persistedAnchor(trip);
         if (persisted.isPresent()) {
             cache.remember(trip.getDestino(), persisted.get(), "persisted trip coordinates");
-            log.info("trip_destination_coordinates source=persisted_trip_coordinates cached=true tripId={}", trip.getId());
-            return Optional.of(new Resolution(persisted.get(), "coordenadas guardadas en el viaje (origen no registrado)", true));
+            log.info("trip_destination_coordinates source=persisted_trip_coordinates cached=true tripId={}",
+                    trip.getId());
+            return Optional.of(
+                    new Resolution(persisted.get(), "coordenadas guardadas en el viaje (origen no registrado)", true));
         }
-        if (providerFailure != null) throw providerFailure;
+        if (providerFailure != null)
+            throw providerFailure;
         return Optional.empty();
     }
 
     private Optional<CoordenadasPublicas> persistedAnchor(Viaje trip) {
         var itinerary = itineraries.findByViaje_Id(trip.getId()).orElse(null);
-        if (itinerary == null) return Optional.empty();
+        if (itinerary == null)
+            return Optional.empty();
         var lodging = lodgings.findByItinerario_Id(itinerary.getId()).orElse(null);
         if (lodging != null) {
             CoordenadasPublicas coordinates = new CoordenadasPublicas(lodging.getLatitud(), lodging.getLongitud());
-            if (valid(coordinates)) return Optional.of(coordinates);
+            if (valid(coordinates))
+                return Optional.of(coordinates);
         }
         List<Actividad> saved = assignments.findDistinctActivitiesByTripId(trip.getId()).stream()
                 .filter(activity -> valid(activity.getLatitud(), activity.getLongitud()))
                 .sorted(Comparator.comparing(Actividad::getId)).toList();
-        if (saved.isEmpty()) return Optional.empty();
-        // Median coordinate is robust against one distant saved day trip and uses only existing trip records.
+        if (saved.isEmpty())
+            return Optional.empty();
+        // Median coordinate is robust against one distant saved day trip and uses only
+        // existing trip records.
         List<BigDecimal> latitudes = saved.stream().map(Actividad::getLatitud).sorted().toList();
         List<BigDecimal> longitudes = saved.stream().map(Actividad::getLongitud).sorted().toList();
         int middle = saved.size() / 2;
@@ -94,8 +105,10 @@ public class TripDestinationCoordinateResolver {
     private static boolean valid(BigDecimal latitude, BigDecimal longitude) {
         return latitude != null && longitude != null
                 && latitude.compareTo(BigDecimal.valueOf(-90)) >= 0 && latitude.compareTo(BigDecimal.valueOf(90)) <= 0
-                && longitude.compareTo(BigDecimal.valueOf(-180)) >= 0 && longitude.compareTo(BigDecimal.valueOf(180)) <= 0;
+                && longitude.compareTo(BigDecimal.valueOf(-180)) >= 0
+                && longitude.compareTo(BigDecimal.valueOf(180)) <= 0;
     }
 
-    public record Resolution(CoordenadasPublicas coordinates, String source, boolean reusedFromTrip) { }
+    public record Resolution(CoordenadasPublicas coordinates, String source, boolean reusedFromTrip) {
+    }
 }

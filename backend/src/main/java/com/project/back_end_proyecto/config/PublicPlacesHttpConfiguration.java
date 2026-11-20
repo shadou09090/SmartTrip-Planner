@@ -11,6 +11,6 @@ public class PublicPlacesHttpConfiguration {
     @Bean
     @ConditionalOnMissingBean(RestClient.Builder.class)
     public RestClient.Builder publicPlacesRestClientBuilder() {
-        return RestClient.builder();
+        return RestClient.builder().requestFactory(HttpRequestFactoryHelper.create(3000, 10000));
     }
 }

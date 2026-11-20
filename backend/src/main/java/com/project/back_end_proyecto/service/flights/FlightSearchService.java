@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class FlightSearchService {
     private final TripPermissionService permissions;
     private final DuffelSearchService duffelSearch;

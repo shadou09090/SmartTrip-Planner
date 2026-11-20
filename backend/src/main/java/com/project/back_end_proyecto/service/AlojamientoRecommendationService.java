@@ -13,14 +13,14 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class AlojamientoRecommendationService {
     private final TripPermissionService permissions;
     private final FuenteLugaresPublicos placesSource;
     private final WikimediaCommonsPhotoService photos;
 
     public AlojamientoRecommendationService(TripPermissionService permissions, FuenteLugaresPublicos placesSource,
-                                            WikimediaCommonsPhotoService photos) {
+            WikimediaCommonsPhotoService photos) {
         this.permissions = permissions;
         this.placesSource = placesSource;
         this.photos = photos;
@@ -31,25 +31,30 @@ public class AlojamientoRecommendationService {
         String destination = trip.getDestino();
         final var startDate = trip.getFechaInicio();
         final var endDate = trip.getFechaFin();
-        List<LugarPublico> places = placesSource.buscarAlojamientos(destination).stream().limit(20).toList();
-        var verifiedPhotos = photos.verifyPlaceImages(places);
-        if (verifiedPhotos == null) verifiedPhotos = java.util.Map.of();
-        var verifiedPhotoMap = verifiedPhotos;
-        return places.stream()
-                .map(place -> {
-                    var photo = verifiedPhotoMap.get(place.id());
-                    return new AlojamientoSugerenciaResponse(place.id(), place.nombre(), place.ubicacion(),
-                            place.categoria(), place.latitud(), place.longitud(), place.urlFuente(),
-                            photo == null ? null : photo.url(), photo == null ? null : photo.attribution(),
-                            photo == null ? null : photo.license(), photo == null ? null : photo.licenseUrl(),
-                            photo == null ? null : photo.sourceUrl(), place.etiquetas().get("website"),
-                            priceSearchUrl(place.nombre(), place.ubicacion(), destination, startDate, endDate));
-                })
-                .toList();
+        try {
+            List<LugarPublico> places = placesSource.buscarAlojamientos(destination).stream().limit(20).toList();
+            var verifiedPhotos = photos.verifyPlaceImages(places);
+            if (verifiedPhotos == null)
+                verifiedPhotos = java.util.Map.of();
+            var verifiedPhotoMap = verifiedPhotos;
+            return places.stream()
+                    .map(place -> {
+                        var photo = verifiedPhotoMap.get(place.id());
+                        return new AlojamientoSugerenciaResponse(place.id(), place.nombre(), place.ubicacion(),
+                                place.categoria(), place.latitud(), place.longitud(), place.urlFuente(),
+                                photo == null ? null : photo.url(), photo == null ? null : photo.attribution(),
+                                photo == null ? null : photo.license(), photo == null ? null : photo.licenseUrl(),
+                                photo == null ? null : photo.sourceUrl(), place.etiquetas().get("website"),
+                                priceSearchUrl(place.nombre(), place.ubicacion(), destination, startDate, endDate));
+                    })
+                    .toList();
+        } catch (Exception ex) {
+            return List.of();
+        }
     }
 
     private static String priceSearchUrl(String name, String address, String destination,
-                                         java.time.LocalDate startDate, java.time.LocalDate endDate) {
+            java.time.LocalDate startDate, java.time.LocalDate endDate) {
         String search = String.join(", ", java.util.stream.Stream.of(name, address, destination)
                 .filter(value -> value != null && !value.isBlank()).toList());
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString("https://www.booking.com/searchresults.html")

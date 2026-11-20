@@ -14,7 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class TripPermissionService {
     private final ViajeRepository viajeRepository;
     private final ColaboradorViajeRepository colaboradorRepository;

@@ -80,7 +80,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/itinerario/**", "/api/viajes/**",
-                                "/api/vuelos/**", "/healthz", "/error", "/api/public-places/**").permitAll()
+                                "/api/vuelos/**", "/healthz", "/error", "/api/public-places/**",
+                                "/api/intereses/**", "/api/destinos/**", "/api/invitaciones/**").permitAll()
                         .anyRequest().authenticated()
                 );
         if (jwtDecoder != null) {
@@ -94,7 +95,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Profile("oracle")
+    @Profile("!local-no-db")
     UserDetailsService oracleNoPasswordAuthenticationService() {
         return username -> { throw new UsernameNotFoundException("Use the account login endpoint."); };
     }

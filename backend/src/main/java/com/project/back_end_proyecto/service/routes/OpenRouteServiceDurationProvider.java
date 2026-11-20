@@ -23,7 +23,7 @@ import java.util.Map;
 
 /** Server-side ORS Directions V2 adapter. API keys never leave the backend. */
 @Component
-@Profile("oracle")
+@Profile("!local-no-db")
 public class OpenRouteServiceDurationProvider implements RouteDurationProvider {
     private static final Logger log = LoggerFactory.getLogger(OpenRouteServiceDurationProvider.class);
     private static final String DEFAULT_BASE_URL = "https://api.heigit.org";
@@ -38,10 +38,7 @@ public class OpenRouteServiceDurationProvider implements RouteDurationProvider {
             @Value("${smarttrip.routes.ors.api-key:}") String apiKey,
             @Value("${smarttrip.routes.ors.connect-timeout-ms:3000}") long connectTimeoutMillis,
             @Value("${smarttrip.routes.ors.read-timeout-ms:12000}") long readTimeoutMillis) {
-        var httpClient = java.net.http.HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(Math.max(1000, connectTimeoutMillis))).build();
-        var requestFactory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofMillis(Math.max(1000, readTimeoutMillis)));
+        var requestFactory = com.project.back_end_proyecto.config.HttpRequestFactoryHelper.create(connectTimeoutMillis, readTimeoutMillis);
         this.client = builder.clone().baseUrl(baseUrl).requestFactory(requestFactory).build();
         this.apiKey = apiKey == null ? "" : apiKey.trim();
     }

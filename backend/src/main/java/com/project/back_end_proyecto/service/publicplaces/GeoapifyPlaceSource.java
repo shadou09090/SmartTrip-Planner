@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Geoapify Places adapter. API keys are sent only from the backend and are never logged. */
 @Component
-@Profile("oracle")
+@Profile("!local-no-db")
 public class GeoapifyPlaceSource implements FuenteLugaresPublicos {
     private static final Logger log = LoggerFactory.getLogger(GeoapifyPlaceSource.class);
     private static final String DEFAULT_BASE_URL = "https://api.geoapify.com";
@@ -68,10 +68,7 @@ public class GeoapifyPlaceSource implements FuenteLugaresPublicos {
                                @Value("${smarttrip.places.geoapify.connect-timeout-ms:3000}") long connectTimeoutMs,
                                @Value("${smarttrip.places.geoapify.read-timeout-ms:10000}") long readTimeoutMs,
                                @Value("${smarttrip.places.geoapify.boundary-search-enabled:true}") boolean boundarySearchEnabled) {
-        var httpClient = java.net.http.HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(Math.max(1000, connectTimeoutMs))).build();
-        var requestFactory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofMillis(Math.max(1000, readTimeoutMs)));
+        var requestFactory = com.project.back_end_proyecto.config.HttpRequestFactoryHelper.create(connectTimeoutMs, readTimeoutMs);
         this.client = builder.clone().baseUrl(baseUrl).requestFactory(requestFactory).build();
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.nominatim = nominatim;

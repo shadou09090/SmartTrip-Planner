@@ -35,9 +35,7 @@ public class WikimediaCommonsPhotoService {
 
     @Autowired
     public WikimediaCommonsPhotoService(RestClient.Builder builder) {
-        var httpClient = java.net.http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
-        var requestFactory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofSeconds(5));
+        var requestFactory = com.project.back_end_proyecto.config.HttpRequestFactoryHelper.create(3000, 5000);
         this.client = builder.clone().baseUrl(API).requestFactory(requestFactory).build();
     }
 

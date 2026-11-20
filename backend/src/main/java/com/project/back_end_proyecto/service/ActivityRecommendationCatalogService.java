@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class ActivityRecommendationCatalogService {
     private static final Logger log = LoggerFactory.getLogger(ActivityRecommendationCatalogService.class);
     private static final double MAX_LOCAL_ACTIVITY_DISTANCE_KM = 50d;

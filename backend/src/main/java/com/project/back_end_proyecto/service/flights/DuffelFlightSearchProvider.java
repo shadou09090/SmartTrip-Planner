@@ -46,9 +46,7 @@ public class DuffelFlightSearchProvider implements FlightSearchProvider {
     public DuffelFlightSearchProvider(RestClient.Builder builder,
                                      @Value("${smarttrip.flights.duffel.base-url:https://api.duffel.com}") String baseUrl,
                                      @Value("${smarttrip.flights.duffel.access-token:}") String accessToken) {
-        var http = java.net.http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
-        var requestFactory = new org.springframework.http.client.JdkClientHttpRequestFactory(http);
-        requestFactory.setReadTimeout(Duration.ofSeconds(15));
+        var requestFactory = com.project.back_end_proyecto.config.HttpRequestFactoryHelper.create(3000, 15000);
         this.client = builder.clone().baseUrl(baseUrl).requestFactory(requestFactory)
                 .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader("Duffel-Version", VERSION).build();
@@ -63,8 +61,7 @@ public class DuffelFlightSearchProvider implements FlightSearchProvider {
     @Override
     public List<FlightPlaceSuggestion> suggestPlaces(String query) {
         String normalized = query == null ? "" : query.trim();
-        if (normalized.length() < 2) return List.of();
-        requireConfigured();
+        if (normalized.length() < 2 || !StringUtils.hasText(accessToken)) return List.of();
         String cacheKey = normalized.toLowerCase(java.util.Locale.ROOT);
         CachedSuggestions cached = suggestionCache.get(cacheKey);
         if (cached != null && cached.expiresAtMillis() > System.currentTimeMillis()) return cached.places();

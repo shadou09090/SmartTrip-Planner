@@ -18,7 +18,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 @Configuration
-@Profile("oracle")
+@Profile("!local-no-db")
 public class JwtConfig {
 
     @Bean

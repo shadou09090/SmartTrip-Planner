@@ -130,17 +130,30 @@
 
 .field-error,
 .form-error {
-    color: #b91c1c;
-    font-size: 0.82rem;
+    color: #991b1b;
+    font-size: 0.88rem;
     font-weight: 600;
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
 .form-error {
-    margin-top: -10px;
-    padding: 11px 13px;
-    border-radius: 9px;
+    margin: 14px 0;
+    padding: 12px 18px;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
     background: #fef2f2;
+    box-shadow: 0 2px 8px rgba(185, 28, 28, 0.06);
+}
+
+.form-notice {
+    margin: 14px 0;
+    padding: 12px 18px;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 0.88rem;
+    line-height: 1.5;
 }
 
 .interests {
@@ -897,6 +910,50 @@
 
 .trip-page--extras .trip-card form:not(.flight-search-form) > button {
     justify-self: start;
+    margin-top: 8px;
+}
+
+.collaborators-list,
+.sent-invitations-list {
+    display: grid;
+    gap: 12px;
+    padding-left: 0;
+    list-style: none;
+    margin: 14px 0 20px;
+}
+
+.collaborator-item,
+.flight-record-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    background: #f8fafc;
+    line-height: 1.55;
+}
+
+.flight-record-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.invitation-response-form {
+    display: grid;
+    gap: 14px;
+    margin-top: 14px;
+    max-width: 520px;
+}
+
+.invitation-action-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 6px;
 }
 
 .trip-page--extras .lodging-suggestions {
@@ -1019,28 +1076,29 @@
 .draft-activity-row select { min-height: 36px; padding: 6px 10px; border: 1px solid #dce4e9; border-radius: 8px; background: #fff; }
 @media (max-width: 640px) { .itinerary-suggest-button, .itinerary-draft-actions button { width: 100%; justify-content: center; } .draft-activity-row { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .itinerary-suggest-button { transition: none; } }
-.budget-category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 14px; margin: 18px 0; }
-.budget-category-card { min-width: 0; padding: 16px; border: 1px solid #dbe8e6; border-radius: 16px; background: #fff; box-shadow: 0 8px 22px rgb(20 57 67 / 5%); }
-.budget-category-card h4, .budget-activity-costs h4 { margin: 0; color: #153f46; }
-.budget-category-card header p, .budget-category-card > p, .budget-activity-row p { margin: 5px 0 10px; color: #60777b; font-size: .86rem; }
+.budget-category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 18px; margin: 22px 0; }
+.budget-category-card { min-width: 0; padding: 20px; border: 1px solid #dbe8e6; border-radius: 18px; background: #fff; box-shadow: 0 8px 24px rgb(20 57 67 / 6%); }
+.budget-category-card h4, .budget-activity-costs h4 { margin: 0 0 6px; color: #153f46; font-size: 1.1rem; }
+.budget-category-card header p, .budget-category-card > p, .budget-activity-row p { margin: 6px 0 14px; color: #5a7579; font-size: .88rem; line-height: 1.55; }
 .budget-category-card__current { color: #174f53 !important; font-weight: 700; }
-.budget-category-card__hotel { padding: 8px 10px; border-radius: 9px; background: #f2f8f6; }
-.budget-category-card form, .budget-activity-row form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 125px), 1fr)); align-items: end; gap: 9px; }
-.budget-category-card label, .budget-activity-row label { display: grid; gap: 5px; color: #304e54; font-size: .82rem; font-weight: 650; }
-.budget-category-card input:not([type=checkbox]), .budget-category-card select, .budget-activity-row input:not([type=checkbox]), .budget-activity-row select { width: 100%; min-width: 0; min-height: 38px; padding: 7px 9px; border: 1px solid #cedcda; border-radius: 9px; background: #fff; }
-.budget-reference-rate { display: grid; gap: 6px; min-width: 0; }
-.budget-reference-rate > button { justify-self: start; min-height: 34px; padding: 6px 10px; border: 1px solid #b9d8d3; border-radius: 9px; background: #eef8f5; color: #145b58; font-weight: 700; cursor: pointer; }
+.budget-category-card__hotel { padding: 10px 12px; border-radius: 11px; background: #f2f8f6; }
+.budget-category-card form, .budget-activity-row form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); align-items: end; gap: 14px; margin-top: 10px; }
+.budget-category-card label, .budget-activity-row label { display: grid; gap: 6px; color: #234349; font-size: .84rem; font-weight: 650; line-height: 1.4; }
+.budget-category-card input:not([type=checkbox]), .budget-category-card select, .budget-activity-row input:not([type=checkbox]), .budget-activity-row select { width: 100%; min-width: 0; min-height: 42px; padding: 8px 12px; border: 1px solid #c8ded9; border-radius: 10px; background: #fff; font-size: .92rem; }
+.budget-reference-rate { display: grid; gap: 8px; min-width: 0; }
+.budget-reference-rate > button { justify-self: start; min-height: 38px; padding: 7px 14px; border: 1px solid #b9d8d3; border-radius: 10px; background: #eef8f5; color: #145b58; font-weight: 700; cursor: pointer; }
 .budget-reference-rate > button:disabled { cursor: wait; opacity: .65; }
-.budget-reference-rate > p { margin: 0; color: #526c70; font-size: .78rem; line-height: 1.4; }
-.budget-inline-check { display: flex !important; grid-auto-flow: column; justify-content: start; align-items: center; gap: 8px !important; }
-.budget-formula { grid-column: 1 / -1; margin: 0 !important; color: #16706c !important; font-size: .82rem; }
-.budget-card-actions { display: flex; flex-wrap: wrap; gap: 8px; grid-column: 1 / -1; }
-.budget-card-actions button, .budget-activity-row button, .budget-orphan button { min-height: 36px; padding: 7px 11px; border: 1px solid #c8dcda; border-radius: 9px; background: #f4faf9; color: #145b58; font-weight: 700; cursor: pointer; }
-.budget-activity-costs { display: grid; gap: 10px; margin-top: 14px; }
-.budget-activity-row { display: grid; gap: 8px; padding: 13px; border: 1px solid #e0e9e8; border-radius: 13px; background: #fff; }
-.budget-activity-row span { color: #155f5c; font-size: .84rem; font-weight: 700; }
-.budget-orphan { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid #e4eceb; }
-.budget-breakdown { margin-top: 14px; color: #3c5b60; }
+.budget-reference-rate > p { margin: 0; color: #526c70; font-size: .82rem; line-height: 1.5; }
+.budget-inline-check { display: flex !important; grid-auto-flow: column; justify-content: start; align-items: center; gap: 10px !important; }
+.budget-formula { grid-column: 1 / -1; margin: 0 !important; color: #16706c !important; font-size: .86rem; line-height: 1.5; }
+.budget-card-actions { display: flex; flex-wrap: wrap; gap: 10px; grid-column: 1 / -1; margin-top: 8px; }
+.budget-card-actions button, .budget-activity-row button, .budget-orphan button { min-height: 38px; padding: 8px 16px; border: 1px solid #c8dcda; border-radius: 10px; background: #f4faf9; color: #145b58; font-weight: 700; cursor: pointer; transition: all 0.16s ease; }
+.budget-card-actions button:hover:not(:disabled), .budget-activity-row button:hover:not(:disabled) { background: #e2f2ef; border-color: #126b68; transform: translateY(-1px); }
+.budget-activity-costs { display: grid; gap: 14px; margin-top: 18px; }
+.budget-activity-row { display: grid; gap: 10px; padding: 16px; border: 1px solid #e0e9e8; border-radius: 15px; background: #fff; line-height: 1.55; }
+.budget-activity-row span { color: #155f5c; font-size: .88rem; font-weight: 700; }
+.budget-orphan { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid #e4eceb; }
+.budget-breakdown { margin-top: 18px; color: #3c5b60; line-height: 1.55; }
 .budget-breakdown summary, .budget-activity-costs summary { cursor: pointer; font-weight: 700; }
 .trip-global-budget > p { color: #557074; }
 @media (max-width: 640px) { .trip-global-budget { padding: 13px; } .budget-category-grid { grid-template-columns: 1fr; } .budget-activity-row form { grid-template-columns: 1fr; } }

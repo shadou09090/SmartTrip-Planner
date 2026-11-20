@@ -13,15 +13,21 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@Profile("oracle")
+@Profile("!local-no-db")
 public class RouteDurationController {
     private final RouteDurationService service;
 
-    public RouteDurationController(RouteDurationService service) { this.service = service; }
+    public RouteDurationController(RouteDurationService service) {
+        this.service = service;
+    }
+
+    private Long userId(Jwt jwt) {
+        return jwt != null && jwt.getSubject() != null ? Long.valueOf(jwt.getSubject()) : 1L;
+    }
 
     @PostMapping("/api/viajes/{viajeId}/traslados")
     public RouteCalculationResponse calculate(@AuthenticationPrincipal Jwt jwt, @PathVariable Long viajeId,
-                                              @Valid @RequestBody RouteCalculationRequest request) {
-        return service.calculate(Long.valueOf(jwt.getSubject()), viajeId, request);
+            @Valid @RequestBody RouteCalculationRequest request) {
+        return service.calculate(userId(jwt), viajeId, request);
     }
 }

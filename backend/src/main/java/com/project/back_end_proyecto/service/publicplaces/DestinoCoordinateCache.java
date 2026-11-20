@@ -16,9 +16,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
-/** Shared, country-context-preserving geocode cache and single-flight coordinator. */
+/**
+ * Shared, country-context-preserving geocode cache and single-flight
+ * coordinator.
+ */
 @Component
-@Profile("oracle")
+@Profile("!local-no-db")
 public class DestinoCoordinateCache {
     private static final Logger log = LoggerFactory.getLogger(DestinoCoordinateCache.class);
     private static final Duration TTL = Duration.ofHours(6);
@@ -26,30 +29,41 @@ public class DestinoCoordinateCache {
     private final ConcurrentMap<String, Entry> values = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, CompletableFuture<Optional<CoordenadasPublicas>>> inFlight = new ConcurrentHashMap<>();
 
-    public DestinoCoordinateCache() { this(Clock.systemUTC()); }
-    DestinoCoordinateCache(Clock clock) { this.clock = clock; }
+    public DestinoCoordinateCache() {
+        this(Clock.systemUTC());
+    }
+
+    DestinoCoordinateCache(Clock clock) {
+        this.clock = clock;
+    }
 
     public Optional<CoordenadasPublicas> resolve(String destination, String source,
             Supplier<Optional<CoordenadasPublicas>> lookup) {
         String key = normalize(destination);
-        if (key.isEmpty()) return Optional.empty();
+        if (key.isEmpty())
+            return Optional.empty();
         Entry cached = values.get(key);
         if (cached != null && cached.expiresAt().isAfter(clock.instant())) {
             log.debug("destination_resolution source={} cache=hit", cached.source());
             return Optional.of(cached.coordinates());
         }
-        if (cached != null) values.remove(key, cached);
+        if (cached != null)
+            values.remove(key, cached);
 
         String flightKey = key + "|" + normalize(source);
         CompletableFuture<Optional<CoordenadasPublicas>> pending = new CompletableFuture<>();
         CompletableFuture<Optional<CoordenadasPublicas>> existing = inFlight.putIfAbsent(flightKey, pending);
         if (existing != null) {
             log.debug("destination_resolution source={} cache=single_flight_join", source);
-            try { return existing.join(); }
-            catch (CompletionException failure) { throw propagate(failure.getCause()); }
+            try {
+                return existing.join();
+            } catch (CompletionException failure) {
+                throw propagate(failure.getCause());
+            }
         }
         try {
-            // Another provider may have completed while this provider's flight was being registered.
+            // Another provider may have completed while this provider's flight was being
+            // registered.
             Entry shared = values.get(key);
             if (shared != null && shared.expiresAt().isAfter(clock.instant())) {
                 Optional<CoordenadasPublicas> reused = Optional.of(shared.coordinates());
@@ -63,8 +77,10 @@ public class DestinoCoordinateCache {
             if (result.isPresent()) {
                 Instant now = clock.instant();
                 Entry fetched = new Entry(result.get(), source, now.plus(TTL));
-                effectiveEntry = values.compute(key, (ignored, current) -> current != null && current.expiresAt().isAfter(now)
-                        ? current : fetched);
+                effectiveEntry = values.compute(key,
+                        (ignored, current) -> current != null && current.expiresAt().isAfter(now)
+                                ? current
+                                : fetched);
                 result = Optional.of(effectiveEntry.coordinates());
             }
             log.info("destination_resolution source={} cache=miss result={}",
@@ -76,7 +92,8 @@ public class DestinoCoordinateCache {
             Entry seeded = values.get(key);
             if (seeded != null && seeded.expiresAt().isAfter(clock.instant())) {
                 Optional<CoordenadasPublicas> reused = Optional.of(seeded.coordinates());
-                log.info("destination_resolution source={} cache=concurrent_seed_after_provider_failure", seeded.source());
+                log.info("destination_resolution source={} cache=concurrent_seed_after_provider_failure",
+                        seeded.source());
                 pending.complete(reused);
                 return reused;
             }
@@ -91,13 +108,15 @@ public class DestinoCoordinateCache {
 
     public void remember(String destination, CoordenadasPublicas coordinates, String source) {
         String key = normalize(destination);
-        if (key.isEmpty() || !valid(coordinates)) return;
+        if (key.isEmpty() || !valid(coordinates))
+            return;
         values.put(key, new Entry(coordinates, source, clock.instant().plus(TTL)));
         log.debug("destination_resolution source={} cache=seeded", source);
     }
 
     private static RuntimeException propagate(Throwable failure) {
-        return failure instanceof RuntimeException runtime ? runtime : new IllegalStateException("Geocoding failed", failure);
+        return failure instanceof RuntimeException runtime ? runtime
+                : new IllegalStateException("Geocoding failed", failure);
     }
 
     private static boolean valid(CoordenadasPublicas coordinates) {
@@ -109,9 +128,11 @@ public class DestinoCoordinateCache {
     }
 
     private static String normalize(String destination) {
-        return destination == null ? "" : destination.trim().toLowerCase(Locale.ROOT)
-                .replaceAll("\\s+", " ");
+        return destination == null ? ""
+                : destination.trim().toLowerCase(Locale.ROOT)
+                        .replaceAll("\\s+", " ");
     }
 
-    private record Entry(CoordenadasPublicas coordinates, String source, Instant expiresAt) { }
+    private record Entry(CoordenadasPublicas coordinates, String source, Instant expiresAt) {
+    }
 }

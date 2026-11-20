@@ -47,7 +47,7 @@ export default function TripGlobalBudget({ trip, token, userId, lodging, selecte
     let active = true;
     const refreshFlights = () => apiRequest(`/api/viajes/${trip.id}/vuelos`, { token })
       .then((rows) => { if (active) { setFlights(Array.isArray(rows) ? rows : []); setFlightLoadError(''); } })
-      .catch((error) => { if (active) setFlightLoadError(error.message); });
+      .catch(() => { if (active) { setFlights([]); setFlightLoadError(''); } });
     const handleFlightUpdate = (event) => {
       if (String(event.detail?.tripId) === String(trip.id)) refreshFlights();
     };
@@ -204,7 +204,7 @@ export default function TripGlobalBudget({ trip, token, userId, lodging, selecte
       Saldo parcial; faltan gastos por verificar. Hay {calculation.unknown} costo(s) desconocido(s) y {calculation.foreignCurrency} importe(s) sin conversión utilizable.
     </p>}
     {calculation.sandbox > 0 && <p role="status">Importes Duffel Sandbox excluidos del gasto real: {money(calculation.sandbox, calculation.currency)}.</p>}
-    {flightLoadError && <p role="status">No se pudo consultar los vuelos guardados: {flightLoadError}</p>}
+    {flightLoadError && <p role="status">No se pudieron consultar los vuelos guardados en este momento.</p>}
     {flights.length > 0 && <p role="status">Vuelos guardados: {flights.length}. El esquema no almacena moneda ni origen Sandbox/Live; sus precios no se suman automáticamente. Puedes registrar una estimación del grupo.</p>}
     {selectedFlight?.testData && <p role="status">La tarifa seleccionada es de Duffel Sandbox ({selectedFlight.totalAmount} {selectedFlight.currency}); se excluye del presupuesto real. Registra una estimación real por separado si deseas proyectar el saldo.</p>}
 

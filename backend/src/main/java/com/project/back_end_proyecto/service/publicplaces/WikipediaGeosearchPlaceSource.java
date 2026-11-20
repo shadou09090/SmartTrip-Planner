@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Wikipedia's read-only MediaWiki geosearch supplies editorially documented candidates. */
 @Component
-@Profile("oracle")
+@Profile("!local-no-db")
 public class WikipediaGeosearchPlaceSource {
     private static final Logger log = LoggerFactory.getLogger(WikipediaGeosearchPlaceSource.class);
     private static final String BASE_URL = "https://en.wikipedia.org";
@@ -52,10 +52,7 @@ public class WikipediaGeosearchPlaceSource {
                                          @Value("${smarttrip.places.wikipedia.enabled:true}") boolean enabled,
                                          @Value("${smarttrip.places.wikipedia.connect-timeout-ms:3000}") long connectTimeoutMs,
                                          @Value("${smarttrip.places.wikipedia.read-timeout-ms:8000}") long readTimeoutMs) {
-        var httpClient = java.net.http.HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(Math.max(1000, connectTimeoutMs))).build();
-        var requestFactory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofMillis(Math.max(1000, readTimeoutMs)));
+        var requestFactory = com.project.back_end_proyecto.config.HttpRequestFactoryHelper.create(connectTimeoutMs, readTimeoutMs);
         this.client = builder.clone().baseUrl(BASE_URL).requestFactory(requestFactory).build();
         this.geocoder = geocoder;
         this.clock = Clock.systemUTC();

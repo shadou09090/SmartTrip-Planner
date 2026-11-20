@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service
-@Profile("oracle")
+@Profile("!local-no-db")
 public class RouteDurationService {
     private static final Logger log = LoggerFactory.getLogger(RouteDurationService.class);
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
@@ -40,7 +40,8 @@ public class RouteDurationService {
                 request.destination().latitude().stripTrailingZeros().toPlainString(),
                 request.destination().longitude().stripTrailingZeros().toPlainString());
         CachedRoutes cached = cache.get(key);
-        if (cached != null && cached.expiresAt().isAfter(Instant.now())) return cached.response();
+        if (cached != null && cached.expiresAt().isAfter(Instant.now()))
+            return cached.response();
         Instant now = Instant.now();
         while (true) {
             Instant previous = lastRequest.get();
@@ -48,13 +49,16 @@ public class RouteDurationService {
                 throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                         "Espera un momento antes de volver a calcular traslados.");
             }
-            if (lastRequest.compareAndSet(previous, now)) break;
+            if (lastRequest.compareAndSet(previous, now))
+                break;
         }
         List<RouteCalculationResponse.ModeResult> routes = java.util.Arrays.stream(RouteTravelMode.values())
                 .map(mode -> calculateMode(request, mode)).toList();
         RouteCalculationResponse response = new RouteCalculationResponse(routes);
-        if (cache.size() >= 500) cache.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
-        if (cache.size() >= 500) cache.clear();
+        if (cache.size() >= 500)
+            cache.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
+        if (cache.size() >= 500)
+            cache.clear();
         cache.put(key, new CachedRoutes(response, now.plus(CACHE_TTL)));
         return response;
     }
@@ -73,6 +77,9 @@ public class RouteDurationService {
         }
     }
 
-    private record RouteKey(String originLat, String originLon, String destinationLat, String destinationLon) { }
-    private record CachedRoutes(RouteCalculationResponse response, Instant expiresAt) { }
+    private record RouteKey(String originLat, String originLon, String destinationLat, String destinationLon) {
+    }
+
+    private record CachedRoutes(RouteCalculationResponse response, Instant expiresAt) {
+    }
 }

@@ -25,8 +25,25 @@ export default function Register({ onNavigate }) {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (!formData.firstName.trim()) {
+      setError('El nombre es obligatorio.');
+      return;
+    }
+    if (!formData.lastName.trim()) {
+      setError('El apellido es obligatorio.');
+      return;
+    }
+    if (!formData.email.trim()) {
+      setError('El correo electrónico es obligatorio.');
+      return;
+    }
+    if (formData.password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
-      setError('Las contraseñas no coinciden');
+      setError('Las contraseñas no coinciden.');
       return;
     }
 
@@ -41,11 +58,19 @@ export default function Register({ onNavigate }) {
         }),
       });
       setSuccess(typeof message === 'string'
-        ? message
-        : 'Solicitud recibida. Puedes intentar iniciar sesión con ese correo.');
+        ? `${message} Redirigiendo al inicio de sesión...`
+        : '¡Cuenta registrada exitosamente! Redirigiendo al inicio de sesión...');
       setSubmitted(false);
+      setTimeout(() => {
+        onNavigate('login');
+      }, 1500);
     } catch (requestError) {
-      setError(requestError.message);
+      const msg = requestError?.message || '';
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        setError('No se pudo conectar con el servidor backend (http://localhost:8080). Verifica que el backend esté iniciado.');
+      } else {
+        setError(msg || 'Ocurrió un error al registrar la cuenta.');
+      }
       setSubmitted(false);
     }
   };
