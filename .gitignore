@@ -1,4 +1,3 @@
-# Node & Frontend
 node_modules/
 frontend/node_modules/
 dist/
@@ -7,7 +6,6 @@ frontend/dist/
 frontend/.vite/
 *.log
 
-# STS & IDE
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
@@ -21,13 +19,11 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
 .idea
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -37,5 +33,27 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
 .vscode/
+
+backend/data/
+*.mv.db
+
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+**/WALLET_BD/
+**/Wallet/
+**/wallet/
+**/Wallet_*.zip
+**/wallet_*.zip
+**/cwallet.sso
+**/ewallet.p12
+**/*.jks
+**/*.keystore
+**/*.p12
+**/*.pfx
+**/oracle-wallet*.zip
+**/oracle-wallet*.zip.b64

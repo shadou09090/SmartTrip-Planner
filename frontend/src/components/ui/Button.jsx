@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function Button({
   children,
-  variant = 'primary', // 'primary' | 'secondary' | 'submit' | '3d'
+  variant = 'primary',
   type = 'button',
   onClick,
   disabled = false,

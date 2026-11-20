@@ -77,3 +77,60 @@
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
 }
+
+.nav-brand {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    text-align: left;
+}
+
+.nav-brand:focus-visible,
+.navbar :is(button, a):focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.35);
+    outline-offset: 3px;
+}
+
+.nav-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+    box-shadow: none;
+}
+
+@media (max-width: 760px) {
+    .navbar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px 18px;
+    }
+
+    .nav-links {
+        width: 100%;
+        max-width: 100%;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 2px 2px 7px;
+        scrollbar-width: thin;
+    }
+
+    .nav-links .nav-btn {
+        flex: 0 0 auto;
+        min-height: 42px;
+        padding: 9px 13px;
+        white-space: nowrap;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .navbar *,
+    .navbar *::before,
+    .navbar *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
